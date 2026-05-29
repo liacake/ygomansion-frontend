@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile – Ghost Mansion</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .profile-tabs { margin-top: 2rem; }
+    .stats-row {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 1.4rem;
+      color: var(--gold);
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <div id="navbar"></div>
+  <main>
+    <div style="margin-bottom:1rem"><a href="index.html" class="btn btn-ghost btn-sm">← Home</a></div>
+
+    <div id="alert" class="alert alert-error"></div>
+    <div id="successAlert" class="alert alert-success"></div>
+
+    <div id="loading" class="loading-center"><div class="spinner"></div></div>
+    <div id="content" class="hidden"></div>
+  </main>
+  <div id="footer"></div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal">
+    <button class="modal-close" id="closeEdit">✕</button>
+    <div class="modal-title">Edit Profile</div>
+    <div id="editAlert" class="alert alert-error"></div>
+    <form id="editForm">
+      <div class="form-group">
+        <label class="form-label">Profile Image URL</label>
+        <input class="form-input" id="eImageUrl" type="url" placeholder="https://…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="eDescription" rows="4" placeholder="Tell the community about yourself…"></textarea>
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem">
+        <button class="btn btn-primary" type="submit" id="editSaveBtn">Save</button>
+        <button class="btn btn-ghost" type="button" id="cancelEdit">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+renderNavbar();
+renderFooter();
+
+const userId  = getParam('id');
+const loading = document.getElementById('loading');
+const content = document.getElementById('content');
+const alertEl = document.getElementById('alert');
+const successEl = document.getElementById('successAlert');
+
+let user = null, userCards = [], userDecks = [];
+
+if (!userId) {
+  showAlert(alertEl, 'No user ID specified.');
+  loading.classList.add('hidden');
+} else {
+  loadProfile();
+}
+
+async function loadProfile() {
+  try {
+    [user, userCards, userDecks] = await Promise.all([
+      apiFetch(`/users/${userId}`),
+      apiFetch(`/cards?userId=${userId}`),
+      apiFetch(`/decks?userId=${userId}`),
+    ]);
+    renderProfile();
+  } catch(e) {
+    showAlert(alertEl, e.message || 'User not found.');
+  } finally {
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+  }
+}
+
+function renderProfile() {
+  const myId    = Auth.getUserId();
+  const canEdit = Auth.isAdmin() || (myId && Number(myId) === user.id);
+
+  content.innerHTML = `
+    <div class="profile-hero">
+      ${user.imageUrl
+        ? `<img class="profile-avatar" src="${escHtml(user.imageUrl)}" alt="${escHtml(user.username)}">`
+        : `<div class="profile-avatar-placeholder">👤</div>`}
+      <div class="profile-info">
+        <div class="profile-name">${escHtml(user.username)}</div>
+        ${user.roles?.includes('ADMIN') ? '<span class="badge badge-admin" style="margin-bottom:0.5rem">Admin</span>' : ''}
+        <div class="profile-desc">${escHtml(user.description || 'No description yet.')}</div>
+        <div class="stats-row">
+          <div class="stat-item"><div class="stat-num">${userCards.length}</div><div class="stat-label">Cards</div></div>
+          <div class="stat-item"><div class="stat-num">${userDecks.length}</div><div class="stat-label">Decks</div></div>
+        </div>
+        ${canEdit ? `<button class="btn btn-secondary btn-sm" id="editProfileBtn" style="margin-top:1rem">Edit Profile</button>` : ''}
+      </div>
+    </div>
+
+    <div class="profile-tabs">
+      <div class="tabs">
+        <button class="tab-btn active" data-ptab="cards">Cards <span style="color:var(--text-muted)">(${userCards.length})</span></button>
+        <button class="tab-btn" data-ptab="decks">Decks <span style="color:var(--text-muted)">(${userDecks.length})</span></button>
+      </div>
+
+      <div id="ptab-cards" class="tab-panel active">
+        ${userCards.length
+          ? `<div class="card-grid">${userCards.map(c => renderCardItem(c, `card-detail.html?id=${c.id}&type=local`)).join('')}</div>`
+          : `<div class="empty-state"><div class="empty-icon">🂠</div><h3>No cards yet</h3></div>`}
+      </div>
+
+      <div id="ptab-decks" class="tab-panel">
+        ${userDecks.length
+          ? `<div class="deck-list">${userDecks.map(d => {
+              const cardCount = (d.ygoprocards?.length ?? 0) + (d.localcards?.length ?? 0);
+              return `
+                <a href="deck-editor.html?id=${d.id}" class="deck-card">
+                  <div class="deck-card-name">${escHtml(d.name ?? 'Unnamed Deck')}</div>
+                  <div class="deck-card-meta">
+                    <span class="badge badge-dim">${cardCount} cards</span>
+                  </div>
+                </a>`;
+            }).join('')}</div>`
+          : `<div class="empty-state"><div class="empty-icon">🃏</div><h3>No decks yet</h3></div>`}
+      </div>
+    </div>`;
+
+  // Tabs
+  document.querySelectorAll('[data-ptab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-ptab]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`ptab-${btn.dataset.ptab}`)?.classList.add('active');
+    });
+  });
+
+  document.getElementById('editProfileBtn')?.addEventListener('click', openEditModal);
+}
+
+// ─── Edit Modal ───────────────────────────────────────────────────────────────
+function openEditModal() {
+  document.getElementById('eImageUrl').value    = user.imageUrl ?? '';
+  document.getElementById('eDescription').value = user.description ?? '';
+  hideAlert(document.getElementById('editAlert'));
+  document.getElementById('editModal').classList.add('open');
+}
+document.getElementById('closeEdit').addEventListener('click', () => document.getElementById('editModal').classList.remove('open'));
+document.getElementById('cancelEdit').addEventListener('click',() => document.getElementById('editModal').classList.remove('open'));
+
+document.getElementById('editForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const editAlertEl = document.getElementById('editAlert');
+  hideAlert(editAlertEl);
+
+  const payload = {
+    username:    user.username,
+    imageUrl:    document.getElementById('eImageUrl').value.trim() || null,
+    description: document.getElementById('eDescription').value.trim() || null,
+  };
+
+  const btn = document.getElementById('editSaveBtn');
+  setLoading(btn, true, 'Saving…');
+  try {
+    user = await apiFetch(`/users/${userId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    document.getElementById('editModal').classList.remove('open');
+    showAlert(successEl, 'Profile updated!', 'success');
+    renderProfile();
+  } catch(err) {
+    showAlert(editAlertEl, err.message || 'Failed to update profile.');
+  } finally {
+    setLoading(btn, false);
+  }
+});
+</script>
+</body>
+</html>

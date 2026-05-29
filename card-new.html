@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Card – Ghost Mansion</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .new-card-layout {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 2rem;
+      align-items: start;
+    }
+    .card-preview {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      position: sticky;
+      top: 80px;
+      text-align: center;
+    }
+    .card-preview img {
+      width: 100%;
+      aspect-ratio: 421/614;
+      object-fit: cover;
+      border-radius: var(--radius);
+      margin-bottom: 0.75rem;
+    }
+    .card-preview-placeholder {
+      width: 100%;
+      aspect-ratio: 421/614;
+      background: var(--bg3);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+    .preview-name {
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      color: var(--gold);
+      margin-bottom: 0.4rem;
+    }
+    .preview-type { font-size: 0.8rem; color: var(--text-dim); }
+    @media (max-width: 720px) {
+      .new-card-layout { grid-template-columns: 1fr; }
+      .card-preview { position: static; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <div id="navbar"></div>
+  <main>
+    <div style="margin-bottom:1rem"><a href="cards.html" class="btn btn-ghost btn-sm">← Back to Cards</a></div>
+    <div class="page-header">
+      <div>
+        <div class="page-title">Create a Card</div>
+        <div class="page-subtitle">Add your custom card to the mansion</div>
+      </div>
+    </div>
+
+    <div id="alert" class="alert alert-error"></div>
+    <div id="successAlert" class="alert alert-success"></div>
+
+    <div class="new-card-layout">
+      <div class="panel">
+        <form id="cardForm" novalidate>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Card Name *</label>
+              <input class="form-input" id="cName" placeholder="Dark Magician…" required>
+              <div class="form-error" id="cNameErr"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Card Type *</label>
+              <select class="form-select" id="cType"></select>
+              <div class="form-error" id="cTypeErr"></div>
+            </div>
+          </div>
+
+          <div class="form-row" id="rowAtkDef">
+            <div class="form-group">
+              <label class="form-label">ATK</label>
+              <input class="form-input" id="cAtk" type="number" min="0" placeholder="0 – 9999">
+            </div>
+            <div class="form-group">
+              <label class="form-label">DEF</label>
+              <input class="form-input" id="cDef" type="number" min="0" placeholder="0 – 9999">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" id="groupLevel">
+              <label class="form-label">Level / Rank</label>
+              <select class="form-select" id="cLevel"></select>
+            </div>
+            <div class="form-group" id="groupScale">
+              <label class="form-label">Pendulum Scale</label>
+              <select class="form-select" id="cScale"></select>
+            </div>
+            <div class="form-group" id="groupLink">
+              <label class="form-label">Link Value</label>
+              <select class="form-select" id="cLinkval"></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" id="groupAttr">
+              <label class="form-label">Attribute</label>
+              <select class="form-select" id="cAttr"></select>
+            </div>
+            <div class="form-group" id="groupRace">
+              <label class="form-label">Race / Sub-type</label>
+              <input class="form-input" id="cRace" placeholder="e.g. Spellcaster">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Archetype</label>
+            <input class="form-input" id="cArchetype" placeholder="e.g. Blue-Eyes, Dark Magician…">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Card Effect / Description</label>
+            <textarea class="form-textarea" id="cEffect" rows="5" placeholder="When this card is Normal Summoned…"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Image URL</label>
+            <input class="form-input" id="cImageUrl" type="url" placeholder="https://…">
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem">Paste any direct image URL. Preview updates automatically.</div>
+          </div>
+
+          <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+            <button class="btn btn-primary btn-lg" type="submit" id="submitBtn">Create Card</button>
+            <a href="cards.html" class="btn btn-ghost btn-lg">Cancel</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Preview -->
+      <div class="card-preview">
+        <div class="panel-title" style="margin-bottom:1rem">Preview</div>
+        <div id="previewImg" class="card-preview-placeholder">🂠</div>
+        <div class="preview-name" id="previewName">Card Name</div>
+        <div class="preview-type" id="previewType">Type</div>
+      </div>
+    </div>
+  </main>
+  <div id="footer"></div>
+</div>
+<script src="js/app.js"></script>
+<script>
+if (!requireAuth()) { /* redirect handled */ }
+
+renderNavbar();
+renderFooter();
+
+// Build selects
+buildTypeSelect(document.getElementById('cType'), false);
+buildOptions(document.getElementById('cLevel'),  LEVELS, 'None', null);
+buildOptions(document.getElementById('cAttr'),   ATTRIBUTES, 'None', null);
+buildOptions(document.getElementById('cScale'),  SCALES, 'None', null);
+buildOptions(document.getElementById('cLinkval'),LINKS, 'None', null);
+
+const typeEl = document.getElementById('cType');
+
+function updateFieldVisibility() {
+  const type = typeEl.value;
+  const isSpell = type.toLowerCase().includes('spell');
+  const isTrap  = type.toLowerCase().includes('trap');
+  const isLink  = type.toLowerCase().includes('link');
+  const isPend  = type.toLowerCase().includes('pendulum');
+  const isXyz   = type.toLowerCase().includes('xyz');
+  const isMonster = !isSpell && !isTrap;
+
+  document.getElementById('rowAtkDef').classList.toggle('hidden', isSpell || isTrap);
+  document.getElementById('groupLevel').classList.toggle('hidden', isSpell || isTrap || isLink || isXyz || isPend);
+  document.getElementById('groupScale').classList.toggle('hidden', !isPend);
+  document.getElementById('groupLink').classList.toggle('hidden', !isLink);
+  document.getElementById('groupAttr').classList.toggle('hidden', isSpell || isTrap);
+  document.getElementById('groupRace').classList.toggle('hidden', false); // always show
+
+  if (!isMonster) {
+    document.getElementById('cAtk').value = '';
+    document.getElementById('cDef').value = '';
+    document.getElementById('cLevel').value = '';
+    document.getElementById('cAttr').value = '';
+  }
+}
+
+typeEl.addEventListener('change', () => {
+  updateFieldVisibility();
+  updatePreview();
+});
+updateFieldVisibility();
+
+// Live preview
+function updatePreview() {
+  const name     = document.getElementById('cName').value.trim();
+  const type     = typeEl.value;
+  const imageUrl = document.getElementById('cImageUrl').value.trim();
+
+  document.getElementById('previewName').textContent = name || 'Card Name';
+  document.getElementById('previewType').textContent = type || 'Type';
+
+  const imgArea = document.getElementById('previewImg');
+  if (imageUrl) {
+    imgArea.outerHTML; // replace
+    const img = document.createElement('img');
+    img.id = 'previewImg';
+    img.src = imageUrl;
+    img.alt = name;
+    img.onerror = () => { img.outerHTML = `<div id="previewImg" class="card-preview-placeholder">🂠</div>`; };
+    document.getElementById('previewImg')?.replaceWith(img);
+  } else {
+    const el = document.getElementById('previewImg');
+    if (el.tagName === 'IMG') el.outerHTML = `<div id="previewImg" class="card-preview-placeholder">🂠</div>`;
+  }
+}
+
+['cName','cType','cImageUrl'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', updatePreview);
+});
+
+// Form submit
+document.getElementById('cardForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const alertEl = document.getElementById('alert');
+  hideAlert(alertEl);
+
+  const name = document.getElementById('cName').value.trim();
+  const type = typeEl.value;
+  const nameErr = document.getElementById('cNameErr');
+  const typeErr = document.getElementById('cTypeErr');
+  let ok = true;
+
+  if (!name) { nameErr.textContent = 'Name is required.'; ok = false; } else nameErr.textContent = '';
+  if (!type) { typeErr.textContent = 'Type is required.'; ok = false; } else typeErr.textContent = '';
+  if (!ok) return;
+
+  const payload = {
+    name,
+    type,
+    atk:       document.getElementById('cAtk').value     !== '' ? Number(document.getElementById('cAtk').value)     : null,
+    def:       document.getElementById('cDef').value     !== '' ? Number(document.getElementById('cDef').value)     : null,
+    level:     document.getElementById('cLevel').value   !== '' ? Number(document.getElementById('cLevel').value)   : null,
+    attribute: document.getElementById('cAttr').value    || null,
+    race:      document.getElementById('cRace').value.trim()    || null,
+    archetype: document.getElementById('cArchetype').value.trim() || null,
+    scale:     document.getElementById('cScale').value   !== '' ? Number(document.getElementById('cScale').value)   : null,
+    linkval:   document.getElementById('cLinkval').value !== '' ? Number(document.getElementById('cLinkval').value) : null,
+    effect:    document.getElementById('cEffect').value.trim()   || null,
+    imageUrl:  document.getElementById('cImageUrl').value.trim() || null,
+  };
+
+  const btn = document.getElementById('submitBtn');
+  setLoading(btn, true, 'Creating…');
+  try {
+    const saved = await apiFetch('/cards', { method: 'POST', body: JSON.stringify(payload) });
+    showAlert(document.getElementById('successAlert'), 'Card created! Redirecting…', 'success');
+    setTimeout(() => window.location.href = `card-detail.html?id=${saved.id}&type=local`, 1200);
+  } catch(err) {
+    showAlert(alertEl, err.message || 'Failed to create card.');
+  } finally {
+    setLoading(btn, false);
+  }
+});
+</script>
+</body>
+</html>

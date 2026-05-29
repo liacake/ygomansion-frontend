@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cards – Ghost Mansion</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .tab-count { color: var(--text-muted); margin-left: 0.4rem; font-size: 0.7em; }
+    .results-count { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 0.75rem; }
+    .toggle-mine { margin-bottom: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <div id="navbar"></div>
+  <main>
+    <div class="page-header">
+      <div>
+        <div class="page-title">Card Library</div>
+        <div class="page-subtitle">Browse custom and official Yu-Gi-Oh cards</div>
+      </div>
+      <div id="addCardBtn" class="hidden">
+        <a href="card-new.html" class="btn btn-primary">+ New Card</a>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar" id="filterBar">
+      <div class="form-group wide">
+        <label class="form-label">Name</label>
+        <input class="form-input" id="fName" placeholder="Search by name…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <select class="form-select" id="fType"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Attribute</label>
+        <select class="form-select" id="fAttr">
+          <option value="">All</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Race / Spell type</label>
+        <select class="form-select" id="fRace"><option value="">All</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Level</label>
+        <select class="form-select" id="fLevel"><option value="">Any</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ATK</label>
+        <input class="form-input" id="fAtk" type="number" min="0" placeholder="e.g. 2500">
+      </div>
+      <div class="form-group">
+        <label class="form-label">DEF</label>
+        <input class="form-input" id="fDef" type="number" min="0" placeholder="e.g. 2000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Archetype</label>
+        <input class="form-input" id="fArchetype" placeholder="e.g. Blue-Eyes">
+      </div>
+      <button class="btn btn-primary" id="searchBtn">Search</button>
+      <button class="btn btn-ghost" id="resetBtn">Reset</button>
+    </div>
+
+    <!-- Sort bar -->
+    <div class="sort-bar">
+      <label>Sort by</label>
+      <select class="form-select" id="sortField">
+        <option value="">—</option>
+        <option value="name">Name</option>
+        <option value="atk">ATK</option>
+        <option value="def">DEF</option>
+        <option value="level">Level</option>
+      </select>
+      <select class="form-select" id="sortDir">
+        <option value="asc">Ascending</option>
+        <option value="desc">Descending</option>
+      </select>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="local">Custom Cards <span class="tab-count" id="localCount"></span></button>
+      <button class="tab-btn" data-tab="ygopro">YGOPRODeck <span class="tab-count" id="ygoproCount"></span></button>
+    </div>
+
+    <!-- Local cards -->
+    <div class="tab-panel active" id="tab-local">
+      <div class="toggle-mine" id="mineToggleWrap">
+        <button class="btn btn-ghost btn-sm" id="toggleMine">Show Only My Cards</button>
+      </div>
+      <div class="results-count" id="localMeta"></div>
+      <div id="localCards" class="card-grid"></div>
+      <div class="load-more-bar" id="localLoadMore">
+        <button class="btn btn-ghost" id="localShowMore">Show More</button>
+        <button class="btn btn-secondary" id="localShowAll">Show All</button>
+      </div>
+    </div>
+
+    <!-- Ygopro cards -->
+    <div class="tab-panel" id="tab-ygopro">
+      <div class="results-count" id="ygoMeta"></div>
+      <div id="ygoproCards" class="card-grid"></div>
+      <div class="load-more-bar" id="ygoproLoadMore">
+        <button class="btn btn-ghost" id="ygoproShowMore">Show More</button>
+        <button class="btn btn-secondary" id="ygoproShowAll">Show All</button>
+      </div>
+    </div>
+  </main>
+  <div id="footer"></div>
+</div>
+<script src="js/app.js"></script>
+<script>
+renderNavbar();
+renderFooter();
+
+if (Auth.isLoggedIn()) document.getElementById('addCardBtn').classList.remove('hidden');
+if (!Auth.isLoggedIn()) document.getElementById('mineToggleWrap').classList.add('hidden');
+
+// Init selects
+buildTypeSelect(document.getElementById('fType'), true);
+buildOptions(document.getElementById('fAttr'), ATTRIBUTES, 'All Attributes');
+buildOptions(document.getElementById('fLevel'), LEVELS, 'Any Level');
+// Race will be rebuilt on type change
+document.getElementById('fType').addEventListener('change', updateRaceOptions);
+updateRaceOptions();
+
+function updateRaceOptions() {
+  const type = document.getElementById('fType').value;
+  const races = canHaveRaces(type);
+  buildOptions(document.getElementById('fRace'), races, 'All');
+}
+
+// State
+let localAll = [], localDisplay = [], localShown = 0, localLimit = 20;
+let ygoproAll = [], ygoproShown = 0, ygoproLimit = 20;
+let showMine = false;
+let currentTab = 'local';
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentTab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${currentTab}`).classList.add('active');
+  });
+});
+
+// Toggle mine
+document.getElementById('toggleMine')?.addEventListener('click', () => {
+  showMine = !showMine;
+  document.getElementById('toggleMine').textContent = showMine ? 'Show All Cards' : 'Show Only My Cards';
+  applyLocalFilters();
+  renderLocal();
+});
+
+// Sort
+document.getElementById('sortField').addEventListener('change', () => { sortAndRenderBoth(); });
+document.getElementById('sortDir').addEventListener('change',   () => { sortAndRenderBoth(); });
+
+// Search
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+document.getElementById('resetBtn').addEventListener('click', resetFilters);
+document.getElementById('fName').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+
+// Load more
+document.getElementById('localShowMore').addEventListener('click', () => { localShown += localLimit; renderLocal(); });
+document.getElementById('localShowAll').addEventListener('click',  () => { localShown = localDisplay.length; renderLocal(); });
+document.getElementById('ygoproShowMore').addEventListener('click',() => { ygoproShown += ygoproLimit; renderYgopro(); });
+document.getElementById('ygoproShowAll').addEventListener('click', () => { ygoproShown = ygoproAll.length; renderYgopro(); });
+
+function getFilters() {
+  return {
+    name:      document.getElementById('fName').value.trim() || null,
+    type:      document.getElementById('fType').value || null,
+    attribute: document.getElementById('fAttr').value || null,
+    race:      document.getElementById('fRace').value || null,
+    level:     document.getElementById('fLevel').value || null,
+    atk:       document.getElementById('fAtk').value || null,
+    def:       document.getElementById('fDef').value || null,
+    archetype: document.getElementById('fArchetype').value.trim() || null,
+  };
+}
+
+function resetFilters() {
+  document.getElementById('fName').value = '';
+  document.getElementById('fType').value = '';
+  document.getElementById('fAttr').value = '';
+  document.getElementById('fLevel').value = '';
+  document.getElementById('fAtk').value = '';
+  document.getElementById('fDef').value = '';
+  document.getElementById('fArchetype').value = '';
+  updateRaceOptions();
+  doSearch();
+}
+
+async function doSearch() {
+  await Promise.all([loadLocal(), loadYgopro()]);
+}
+
+// ─── Local Cards ─────────────────────────────────────────────────────────────
+async function loadLocal() {
+  const container = document.getElementById('localCards');
+  container.innerHTML = `<div class="loading-center" style="grid-column:1/-1"><div class="spinner"></div></div>`;
+  const f = getFilters();
+  const params = new URLSearchParams();
+  if (f.name)      params.set('name', f.name);
+  if (f.type)      params.set('type', f.type);
+  if (f.attribute) params.set('attribute', f.attribute);
+  if (f.race)      params.set('race', f.race);
+  if (f.level)     params.set('level', f.level);
+  if (f.atk)       params.set('atk', f.atk);
+  if (f.def)       params.set('def', f.def);
+  if (f.archetype) params.set('archetype', f.archetype);
+  try {
+    const qs = params.toString();
+    localAll = await apiFetch('/cards' + (qs ? '?' + qs : ''));
+    applyLocalFilters();
+    renderLocal();
+  } catch(e) {
+    container.innerHTML = `<div class="alert alert-error show" style="grid-column:1/-1">${escHtml(e.message)}</div>`;
+  }
+}
+
+function applyLocalFilters() {
+  const uid = Auth.getUserId();
+  localDisplay = showMine && uid
+    ? localAll.filter(c => c.ownerId === uid)
+    : localAll;
+  sortCards(localDisplay);
+  localShown = localLimit;
+  document.getElementById('localCount').textContent = `(${localDisplay.length})`;
+}
+
+function renderLocal() {
+  const container = document.getElementById('localCards');
+  const visible = localDisplay.slice(0, localShown);
+  document.getElementById('localMeta').textContent = `Showing ${visible.length} of ${localDisplay.length} cards`;
+  if (!localDisplay.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><h3>No cards found</h3><p>Try adjusting your filters or create a new card.</p></div>`;
+    document.getElementById('localLoadMore').classList.add('hidden');
+    return;
+  }
+  container.innerHTML = visible.map(c => renderCardItem(c, `card-detail.html?id=${c.id}&type=local`)).join('');
+  const more = localDisplay.length > localShown;
+  document.getElementById('localLoadMore').classList.toggle('hidden', !more);
+}
+
+// ─── YGOPRODeck ───────────────────────────────────────────────────────────────
+async function loadYgopro() {
+  const container = document.getElementById('ygoproCards');
+  container.innerHTML = `<div class="loading-center" style="grid-column:1/-1"><div class="spinner"></div></div>`;
+  const f = getFilters();
+  const params = new URLSearchParams();
+  if (f.name)      params.set('fname', f.name);
+  if (f.type)      params.set('type', f.type);
+  if (f.attribute) params.set('attribute', f.attribute);
+  if (f.race)      params.set('race', f.race);
+  if (f.level)     params.set('level', f.level);
+  if (f.atk)       params.set('atk', f.atk);
+  if (f.def)       params.set('def', f.def);
+  if (f.archetype) params.set('archetype', f.archetype);
+
+  try {
+    const qs = params.toString();
+    const res = await fetch(YGOPRO_BASE + (qs ? '?' + qs : ''));
+    if (!res.ok) throw new Error('No results from YGOPRODeck');
+    const json = await res.json();
+    ygoproAll = (json.data ?? []).map(normalizeYgoproCard);
+    sortCards(ygoproAll);
+    ygoproShown = ygoproLimit;
+    renderYgopro();
+  } catch(e) {
+    ygoproAll = [];
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><h3>No results</h3><p>Try different filters.</p></div>`;
+    document.getElementById('ygoproLoadMore').classList.add('hidden');
+    document.getElementById('ygoproCount').textContent = '(0)';
+  }
+}
+
+function renderYgopro() {
+  const container = document.getElementById('ygoproCards');
+  const visible = ygoproAll.slice(0, ygoproShown);
+  document.getElementById('ygoMeta').textContent = `Showing ${visible.length} of ${ygoproAll.length} cards`;
+  document.getElementById('ygoproCount').textContent = `(${ygoproAll.length})`;
+  if (!ygoproAll.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><h3>No results</h3></div>`;
+    document.getElementById('ygoproLoadMore').classList.add('hidden');
+    return;
+  }
+  container.innerHTML = visible.map(c => renderCardItem(c, `card-detail.html?id=${c.id}&type=ygopro`)).join('');
+  document.getElementById('ygoproLoadMore').classList.toggle('hidden', ygoproAll.length <= ygoproShown);
+}
+
+function sortCards(arr) {
+  const field = document.getElementById('sortField').value;
+  const dir   = document.getElementById('sortDir').value === 'asc' ? 1 : -1;
+  if (!field) return;
+  arr.sort((a, b) => {
+    const va = a[field] ?? (typeof a[field] === 'number' ? -Infinity : '');
+    const vb = b[field] ?? (typeof b[field] === 'number' ? -Infinity : '');
+    if (typeof va === 'string') return dir * va.localeCompare(vb);
+    return dir * (va - vb);
+  });
+}
+
+function sortAndRenderBoth() {
+  sortCards(localDisplay);
+  localShown = localLimit;
+  renderLocal();
+  sortCards(ygoproAll);
+  ygoproShown = ygoproLimit;
+  renderYgopro();
+}
+
+// Initial load
+doSearch();
+</script>
+</body>
+</html>

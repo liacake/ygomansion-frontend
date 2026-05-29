@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deck Editor – Ghost Mansion</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .deck-stats {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .deck-stat {
+      text-align: center;
+    }
+    .deck-stat-num {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 1.4rem;
+      color: var(--gold);
+    }
+    .deck-stat-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .ydk-import {
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <div id="navbar"></div>
+  <main>
+    <div style="margin-bottom:1rem">
+      <a href="decks.html" class="btn btn-ghost btn-sm">← Back to Decks</a>
+    </div>
+
+    <div id="alert" class="alert alert-error"></div>
+    <div id="successAlert" class="alert alert-success"></div>
+    <div id="warningAlert" class="alert alert-info"></div>
+
+    <div id="loading" class="loading-center"><div class="spinner"></div></div>
+
+    <div id="editorWrap" class="hidden">
+      <div class="page-header">
+        <div id="deckTitleArea">
+          <!-- filled by JS -->
+        </div>
+        <div id="saveArea" class="hidden">
+          <button class="btn btn-primary" id="saveDeckBtn">Save Deck</button>
+        </div>
+      </div>
+
+      <div class="deck-stats">
+        <div class="deck-stat"><div class="deck-stat-num" id="totalCount">0</div><div class="deck-stat-label">Total</div></div>
+        <div class="deck-stat"><div class="deck-stat-num" id="ygoproCountNum">0</div><div class="deck-stat-label">Official</div></div>
+        <div class="deck-stat"><div class="deck-stat-num" id="localCountNum">0</div><div class="deck-stat-label">Custom</div></div>
+      </div>
+
+      <div class="deck-editor">
+        <!-- Deck canvas -->
+        <div class="deck-canvas">
+          <div class="panel-header">
+            <span class="panel-title">Deck Cards</span>
+          </div>
+          <div id="deckCardGrid" class="deck-card-grid">
+            <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><p>No cards yet. Add some from the search panel →</p></div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="deck-sidebar" id="editorSidebar">
+          <div class="section-header"><span class="section-title">Search Cards</span></div>
+
+          <div class="tabs">
+            <button class="tab-btn active" data-stab="ygopro">Official</button>
+            <button class="tab-btn" data-stab="local">Custom</button>
+          </div>
+
+          <div id="stab-ygopro" class="tab-panel active">
+            <div class="form-group">
+              <input class="form-input" id="searchYgopro" placeholder="Card name…">
+            </div>
+            <button class="btn btn-primary btn-sm" id="searchYgoproBtn" style="width:100%;justify-content:center">Search</button>
+            <div id="ygoproResults" class="search-results-list"></div>
+          </div>
+
+          <div id="stab-local" class="tab-panel">
+            <div class="form-group">
+              <input class="form-input" id="searchLocal" placeholder="Card name…">
+            </div>
+            <button class="btn btn-primary btn-sm" id="searchLocalBtn" style="width:100%;justify-content:center">Search</button>
+            <div id="localResults" class="search-results-list"></div>
+          </div>
+
+          <div class="ydk-import" id="ydkArea">
+            <div class="section-header"><span class="section-title">YDK Import</span></div>
+            <div class="form-group">
+              <label class="form-label">Custom Card IDs</label>
+              <textarea class="form-textarea" id="ydkCustom" rows="4" placeholder="Paste local card IDs, one per line…"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Official Card IDs (YGOPRO)</label>
+              <textarea class="form-textarea" id="ydkYgopro" rows="4" placeholder="Paste YGOPRO card IDs, one per line…"></textarea>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="importYdkBtn">Import Cards</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div id="footer"></div>
+</div>
+<script src="js/app.js"></script>
+<script>
+renderNavbar();
+renderFooter();
+
+const deckId  = getParam('id'); // null for new deck
+const isNew   = !deckId;
+let deck      = null;
+let deckName  = '';
+// cardCounts: { cardKey: count }  cardKey = "local:id" | "ygo:id"
+// cardData:   { cardKey: cardObj }
+let cardCounts = {}, cardData = {};
+let canEdit   = false;
+
+const loading    = document.getElementById('loading');
+const editorWrap = document.getElementById('editorWrap');
+const alertEl    = document.getElementById('alert');
+const successEl  = document.getElementById('successAlert');
+const warnEl     = document.getElementById('warningAlert');
+
+// Sidebar tabs
+document.querySelectorAll('[data-stab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-stab]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#editorWrap .tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`stab-${btn.dataset.stab}`)?.classList.add('active');
+  });
+});
+
+init();
+
+async function init() {
+  if (isNew) {
+    if (!requireAuth()) return;
+    canEdit = true;
+    deck = null;
+    deckName = 'New Deck';
+    loading.classList.add('hidden');
+    renderEditor();
+    return;
+  }
+
+  try {
+    deck = await apiFetch(`/decks/${deckId}`);
+    deckName = deck.name ?? '';
+    const uid = Auth.getUserId();
+    canEdit = Auth.isAdmin() || (uid && deck.ownerId === uid) || !deck.ownerId;
+    await loadDeckCards();
+  } catch(e) {
+    showAlert(alertEl, e.message || 'Failed to load deck.');
+  } finally {
+    loading.classList.add('hidden');
+    renderEditor();
+  }
+}
+
+async function loadDeckCards() {
+  cardCounts = {};
+  cardData   = {};
+  const promises = [];
+
+  // local cards
+  for (const rawId of (deck.localcards ?? [])) {
+    const key = `local:${rawId}`;
+    cardCounts[key] = (cardCounts[key] ?? 0) + 1;
+    if (!cardData[key]) {
+      promises.push(
+        apiFetch(`/cards/${rawId}`)
+          .then(c => { cardData[key] = c; })
+          .catch(() => {})
+      );
+    }
+  }
+
+  // ygopro cards
+  for (const rawId of (deck.ygoprocards ?? [])) {
+    const key = `ygo:${rawId}`;
+    cardCounts[key] = (cardCounts[key] ?? 0) + 1;
+    if (!cardData[key]) {
+      promises.push(
+        fetch(`${YGOPRO_BASE}?id=${encodeURIComponent(rawId)}`)
+          .then(r => r.json())
+          .then(j => { if(j.data?.[0]) cardData[key] = normalizeYgoproCard(j.data[0]); })
+          .catch(() => {})
+      );
+    }
+  }
+
+  await Promise.all(promises);
+}
+
+function renderEditor() {
+  editorWrap.classList.remove('hidden');
+  const titleArea = document.getElementById('deckTitleArea');
+  const saveArea  = document.getElementById('saveArea');
+
+  if (canEdit) {
+    titleArea.innerHTML = `
+      <div>
+        <div class="page-title" style="font-size:1rem;margin-bottom:0.35rem">Deck Name</div>
+        <input class="form-input" id="deckNameInput" value="${escHtml(deckName)}" style="font-family:'Cinzel',serif;font-size:1.1rem;max-width:320px">
+        ${deck?.ownerUsername ? `<div class="page-subtitle">by <a href="profile.html?id=${deck.ownerId}">${escHtml(deck.ownerUsername)}</a></div>` : ''}
+      </div>`;
+    saveArea.classList.remove('hidden');
+    document.getElementById('saveDeckBtn').addEventListener('click', saveDeck);
+    document.getElementById('ydkArea').classList.remove('hidden');
+  } else {
+    titleArea.innerHTML = `
+      <div>
+        <div class="page-title">${escHtml(deckName)}</div>
+        ${deck?.ownerUsername ? `<div class="page-subtitle">by <a href="profile.html?id=${deck.ownerId}">${escHtml(deck.ownerUsername)}</a></div>` : ''}
+      </div>`;
+    document.getElementById('ydkArea').classList.add('hidden');
+    document.getElementById('editorSidebar').classList.add('hidden');
+  }
+
+  renderDeckGrid();
+  updateStats();
+}
+
+function renderDeckGrid() {
+  const grid = document.getElementById('deckCardGrid');
+  const keys = Object.keys(cardCounts);
+  if (!keys.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><p>No cards yet.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = keys.map(key => {
+    const c    = cardData[key];
+    const count= cardCounts[key];
+    const img  = c?.imageUrl ?? null;
+    const name = c?.name ?? key;
+    const type = key.startsWith('ygo:') ? 'ygopro' : 'local';
+    const rawId= key.split(':')[1];
+    const link = `card-detail.html?id=${encodeURIComponent(rawId)}&type=${type}`;
+
+    return `
+      <div class="deck-slot" data-key="${escHtml(key)}">
+        ${img
+          ? `<img src="${escHtml(img)}" alt="${escHtml(name)}" title="${escHtml(name)}" onclick="window.location='${link}'">`
+          : `<div style="width:100%;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text-muted);cursor:pointer" onclick="window.location='${link}'">🂠</div>`}
+        ${count > 1 ? `<div class="deck-slot-count">×${count}</div>` : ''}
+        ${canEdit ? `
+          <div class="deck-slot-controls">
+            <button onclick="changeCount('${escHtml(key)}', -1)" title="Remove one">−</button>
+            <button onclick="changeCount('${escHtml(key)}', +1)" title="Add one">+</button>
+          </div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function changeCount(key, delta) {
+  const cur = cardCounts[key] ?? 0;
+  const next = cur + delta;
+  if (next <= 0) {
+    delete cardCounts[key];
+    delete cardData[key];
+  } else if (next > 3) {
+    showAlert(warnEl, 'Maximum 3 copies of a card allowed.', 'info');
+    setTimeout(() => warnEl.classList.remove('show'), 3000);
+    return;
+  } else {
+    cardCounts[key] = next;
+  }
+  renderDeckGrid();
+  updateStats();
+}
+
+function updateStats() {
+  let total = 0, ygoTotal = 0, locTotal = 0;
+  for (const [key, cnt] of Object.entries(cardCounts)) {
+    total += cnt;
+    if (key.startsWith('ygo:')) ygoTotal += cnt;
+    else locTotal += cnt;
+  }
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('ygoproCountNum').textContent = ygoTotal;
+  document.getElementById('localCountNum').textContent  = locTotal;
+}
+
+// ─── Save ─────────────────────────────────────────────────────────────────────
+async function saveDeck() {
+  const nameEl = document.getElementById('deckNameInput');
+  const name = nameEl?.value.trim() || deckName;
+  if (!name) { showAlert(alertEl, 'Please enter a deck name.'); return; }
+
+  const ygoprocards = [];
+  const localcards  = [];
+  for (const [key, cnt] of Object.entries(cardCounts)) {
+    const rawId = key.split(':')[1];
+    for (let i = 0; i < cnt; i++) {
+      if (key.startsWith('ygo:')) ygoprocards.push(rawId);
+      else localcards.push(rawId);
+    }
+  }
+
+  const payload = { name, ygoprocards, localcards };
+  const btn = document.getElementById('saveDeckBtn');
+  setLoading(btn, true, 'Saving…');
+  hideAlert(alertEl);
+
+  try {
+    let saved;
+    if (isNew) {
+      saved = await apiFetch('/decks', { method: 'POST', body: JSON.stringify(payload) });
+      showAlert(successEl, 'Deck created! Redirecting…', 'success');
+      setTimeout(() => window.location.href = `deck-editor.html?id=${saved.id}`, 1200);
+    } else {
+      saved = await apiFetch(`/decks/${deckId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      deck = saved;
+      deckName = saved.name;
+      showAlert(successEl, 'Deck saved!', 'success');
+    }
+  } catch(err) {
+    showAlert(alertEl, err.message || 'Failed to save deck.');
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ─── Search YGOPRO ────────────────────────────────────────────────────────────
+async function searchYgopro() {
+  const q = document.getElementById('searchYgopro').value.trim();
+  if (!q) return;
+  const btn = document.getElementById('searchYgoproBtn');
+  const list = document.getElementById('ygoproResults');
+  list.innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
+  setLoading(btn, true, 'Searching…');
+  try {
+    const res = await fetch(`${YGOPRO_BASE}?fname=${encodeURIComponent(q)}&num=10&offset=0`);
+    if (!res.ok) throw new Error('No results');
+    const json = await res.json();
+    const cards = (json.data ?? []).slice(0, 10).map(normalizeYgoproCard);
+    renderSearchResults(list, cards, 'ygo');
+  } catch {
+    list.innerHTML = `<div class="text-muted" style="padding:0.5rem;font-size:0.85rem">No results found.</div>`;
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+document.getElementById('searchYgoproBtn').addEventListener('click', searchYgopro);
+document.getElementById('searchYgopro').addEventListener('keydown', e => { if(e.key==='Enter') searchYgopro(); });
+
+// ─── Search Local ─────────────────────────────────────────────────────────────
+async function searchLocal() {
+  const q = document.getElementById('searchLocal').value.trim();
+  const list = document.getElementById('localResults');
+  const btn  = document.getElementById('searchLocalBtn');
+  list.innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
+  setLoading(btn, true, 'Searching…');
+  try {
+    const qs = q ? `?name=${encodeURIComponent(q)}` : '';
+    const cards = await apiFetch(`/cards${qs}`);
+    renderSearchResults(list, cards.slice(0, 10), 'local');
+  } catch(e) {
+    list.innerHTML = `<div class="text-muted" style="padding:0.5rem;font-size:0.85rem">${escHtml(e.message)}</div>`;
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+document.getElementById('searchLocalBtn').addEventListener('click', searchLocal);
+document.getElementById('searchLocal').addEventListener('keydown', e => { if(e.key==='Enter') searchLocal(); });
+
+function renderSearchResults(container, cards, prefix) {
+  if (!cards.length) {
+    container.innerHTML = `<div class="text-muted" style="padding:0.5rem;font-size:0.85rem">No results.</div>`;
+    return;
+  }
+  container.innerHTML = cards.map(c => {
+    const img = c.imageUrl;
+    const key = `${prefix}:${c.id}`;
+    return `
+      <div class="search-result-item">
+        ${img ? `<img src="${escHtml(img)}" alt="${escHtml(c.name)}">` : `<div style="width:48px;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--text-muted);flex-shrink:0">🂠</div>`}
+        <div class="search-result-info">
+          <div class="search-result-name" title="${escHtml(c.name)}">${escHtml(c.name)}</div>
+          <div class="search-result-type">${escHtml(c.type ?? '')}</div>
+        </div>
+        <button class="btn btn-teal btn-sm" onclick="addCardToDeck('${escHtml(key)}', ${JSON.stringify(c).replace(/"/g,'&quot;')})">+</button>
+      </div>`;
+  }).join('');
+}
+
+function addCardToDeck(key, card) {
+  if (!canEdit) return;
+  const cur = cardCounts[key] ?? 0;
+  if (cur >= 3) {
+    showAlert(warnEl, 'Maximum 3 copies of a card allowed.', 'info');
+    setTimeout(() => warnEl.classList.remove('show'), 3000);
+    return;
+  }
+  cardCounts[key] = cur + 1;
+  cardData[key] = card;
+  renderDeckGrid();
+  updateStats();
+}
+
+// ─── YDK Import ───────────────────────────────────────────────────────────────
+document.getElementById('importYdkBtn')?.addEventListener('click', async () => {
+  const customIds = document.getElementById('ydkCustom').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+  const ygoIds    = document.getElementById('ydkYgopro').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+
+  const btn = document.getElementById('importYdkBtn');
+  setLoading(btn, true, 'Importing…');
+
+  const promises = [];
+  for (const rawId of customIds) {
+    const key = `local:${rawId}`;
+    cardCounts[key] = (cardCounts[key] ?? 0) + 1;
+    if (!cardData[key]) promises.push(apiFetch(`/cards/${rawId}`).then(c => { cardData[key]=c; }).catch(()=>{}));
+  }
+  for (const rawId of ygoIds) {
+    const key = `ygo:${rawId}`;
+    cardCounts[key] = (cardCounts[key] ?? 0) + 1;
+    if (!cardData[key]) promises.push(
+      fetch(`${YGOPRO_BASE}?id=${encodeURIComponent(rawId)}`).then(r=>r.json()).then(j=>{ if(j.data?.[0]) cardData[key]=normalizeYgoproCard(j.data[0]); }).catch(()=>{})
+    );
+  }
+
+  await Promise.all(promises);
+  renderDeckGrid();
+  updateStats();
+  setLoading(btn, false);
+  document.getElementById('ydkCustom').value = '';
+  document.getElementById('ydkYgopro').value = '';
+  showAlert(successEl, `Imported ${customIds.length + ygoIds.length} card IDs.`, 'success');
+});
+</script>
+</body>
+</html>

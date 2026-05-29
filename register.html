@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register – Ghost Mansion</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-logo">☽ Ghost Mansion</div>
+    <div class="auth-subtitle">Join the Duel</div>
+
+    <div id="alert" class="alert alert-error"></div>
+
+    <form id="regForm" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-input" id="username" name="username" type="text" placeholder="Choose a duelist name" autocomplete="username" required>
+        <div class="form-error" id="usernameErr"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-input" id="password" name="password" type="password" placeholder="Min. 6 characters" autocomplete="new-password" required>
+        <div class="form-error" id="passwordErr"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="confirm">Confirm Password</label>
+        <input class="form-input" id="confirm" name="confirm" type="password" placeholder="Repeat password" autocomplete="new-password" required>
+        <div class="form-error" id="confirmErr"></div>
+      </div>
+      <button class="btn btn-primary w-full" type="submit" id="submitBtn" style="width:100%;justify-content:center;margin-top:0.5rem">Create Account</button>
+    </form>
+
+    <div class="auth-switch">
+      Already have an account? <a href="login.html">Login here</a>
+    </div>
+  </div>
+</div>
+<script src="js/app.js"></script>
+<script>
+  if (Auth.isLoggedIn()) window.location.href = 'index.html';
+
+  const form     = document.getElementById('regForm');
+  const alertEl  = document.getElementById('alert');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function validate() {
+    let ok = true;
+    const u  = document.getElementById('username').value.trim();
+    const p  = document.getElementById('password').value;
+    const c  = document.getElementById('confirm').value;
+    const uE = document.getElementById('usernameErr');
+    const pE = document.getElementById('passwordErr');
+    const cE = document.getElementById('confirmErr');
+
+    if (!u)         { uE.textContent = 'Username is required.'; ok = false; }
+    else if (u.length < 3) { uE.textContent = 'Min. 3 characters.'; ok = false; }
+    else             uE.textContent = '';
+
+    if (!p)         { pE.textContent = 'Password is required.'; ok = false; }
+    else if (p.length < 6) { pE.textContent = 'Min. 6 characters.'; ok = false; }
+    else             pE.textContent = '';
+
+    if (!c)         { cE.textContent = 'Please confirm your password.'; ok = false; }
+    else if (c !== p) { cE.textContent = 'Passwords do not match.'; ok = false; }
+    else             cE.textContent = '';
+
+    return ok;
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    hideAlert(alertEl);
+    if (!validate()) return;
+
+    setLoading(submitBtn, true, 'Creating…');
+    try {
+      const data = await apiFetch('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          username: document.getElementById('username').value.trim(),
+          password: document.getElementById('password').value
+        })
+      });
+      Auth.setSession(data.jwt);
+      window.location.href = 'index.html';
+    } catch(err) {
+      showAlert(alertEl, err.message || 'Registration failed.');
+    } finally {
+      setLoading(submitBtn, false);
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ghost Mansion – Yu-Gi-Oh Card Manager</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .hero {
+      text-align: center;
+      padding: 5rem 1rem 4rem;
+      position: relative;
+    }
+    .hero::before {
+      content: '☽';
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 3rem;
+      color: var(--gold);
+      opacity: 0.15;
+      pointer-events: none;
+    }
+    .hero-title {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      color: var(--gold);
+      text-shadow: 0 0 60px rgba(200,150,62,0.4), 0 0 120px rgba(200,150,62,0.15);
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+    .hero-sub {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 2.5rem;
+    }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin: 3rem 0;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      text-align: center;
+      transition: border-color 0.25s, transform 0.25s;
+    }
+    .feature-card:hover { border-color: var(--gold-dim); transform: translateY(-3px); }
+    .feature-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .feature-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+    .feature-desc { font-size: 0.9rem; color: var(--text-dim); line-height: 1.5; }
+
+    .recent-section { margin-top: 3rem; }
+    .card-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <div id="navbar"></div>
+
+  <main>
+    <section class="hero">
+      <div class="hero-title">Ghost Mansion</div>
+      <div class="hero-sub">Yu-Gi-Oh Card Library &amp; Deck Builder</div>
+      <div class="hero-actions">
+        <a href="cards.html" class="btn btn-primary btn-lg">Browse Cards</a>
+        <a href="decks.html" class="btn btn-secondary btn-lg">View Decks</a>
+      </div>
+    </section>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">🂠</div>
+        <div class="feature-title">Card Library</div>
+        <div class="feature-desc">Browse thousands of Yu-Gi-Oh cards from the YGOPRODeck API and create your own custom cards.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚔️</div>
+        <div class="feature-title">Deck Builder</div>
+        <div class="feature-desc">Build and save decks with both official and custom cards. Import via YDK format.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏰</div>
+        <div class="feature-title">Community</div>
+        <div class="feature-desc">Share your cards and decks with other duelists. Browse other players' collections.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <div class="feature-title">Advanced Search</div>
+        <div class="feature-desc">Filter by type, attribute, race, ATK, DEF, archetype and more to find exactly what you need.</div>
+      </div>
+    </div>
+
+    <div class="recent-section">
+      <div class="section-header">
+        <span class="section-title">Recent Custom Cards</span>
+      </div>
+      <div id="recentCards" class="card-mini-grid">
+        <div class="loading-center"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="footer"></div>
+</div>
+<script src="js/app.js"></script>
+<script>
+  renderNavbar();
+  renderFooter();
+
+  async function loadRecent() {
+    const el = document.getElementById('recentCards');
+    try {
+      const cards = await apiFetch('/cards');
+      const recent = cards.slice(-8).reverse();
+      if (!recent.length) {
+        el.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><h3>No cards yet</h3><p>Be the first to create a custom card!</p></div>`;
+        return;
+      }
+      el.innerHTML = recent.map(c => renderCardItem(c, `card-detail.html?id=${c.id}&type=local`)).join('');
+    } catch(e) {
+      el.innerHTML = `<div class="alert alert-error show">Could not load recent cards.</div>`;
+    }
+  }
+  loadRecent();
+</script>
+</body>
+</html>

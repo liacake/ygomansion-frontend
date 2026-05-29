@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Detail – Ghost Mansion</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .card-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
+    .edit-form { margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+  <div id="navbar"></div>
+  <main>
+    <div style="margin-bottom:1rem"><a href="cards.html" class="btn btn-ghost btn-sm">← Back to Cards</a></div>
+
+    <div id="alert" class="alert alert-error"></div>
+    <div id="successAlert" class="alert alert-success"></div>
+
+    <div id="loading" class="loading-center"><div class="spinner"></div></div>
+    <div id="content" class="hidden"></div>
+  </main>
+  <div id="footer"></div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal" style="max-width:600px">
+    <button class="modal-close" id="closeEdit">✕</button>
+    <div class="modal-title">Edit Card</div>
+    <div id="editAlert" class="alert alert-error"></div>
+    <form id="editForm" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Name *</label>
+          <input class="form-input" id="eName" required>
+          <div class="form-error" id="eNameErr"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type *</label>
+          <select class="form-select" id="eType"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">ATK</label>
+          <input class="form-input" id="eAtk" type="number" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">DEF</label>
+          <input class="form-input" id="eDef" type="number" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Level / Rank</label>
+          <select class="form-select" id="eLevel"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Attribute</label>
+          <select class="form-select" id="eAttr"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Race</label>
+          <input class="form-input" id="eRace" placeholder="Race / sub-type">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Archetype</label>
+          <input class="form-input" id="eArchetype" placeholder="Archetype">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Scale</label>
+          <select class="form-select" id="eScale"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Link Value</label>
+          <select class="form-select" id="eLinkval"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Effect / Description</label>
+        <textarea class="form-textarea" id="eEffect" rows="4"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Image URL</label>
+        <input class="form-input" id="eImageUrl" type="url" placeholder="https://…">
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem">
+        <button class="btn btn-primary" type="submit" id="editSaveBtn">Save Changes</button>
+        <button class="btn btn-ghost" type="button" id="cancelEdit">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-backdrop" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">Delete Card</div>
+    <p style="color:var(--text-dim);margin-bottom:1.5rem">Are you sure you want to delete this card? This action cannot be undone.</p>
+    <div style="display:flex;gap:0.75rem">
+      <button class="btn btn-danger" id="confirmDelete">Delete</button>
+      <button class="btn btn-ghost" id="cancelDelete">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+renderNavbar();
+renderFooter();
+
+const id   = getParam('id');
+const type = getParam('type'); // 'local' | 'ygopro'
+let card = null;
+
+const loading  = document.getElementById('loading');
+const content  = document.getElementById('content');
+const alertEl  = document.getElementById('alert');
+const successEl= document.getElementById('successAlert');
+
+if (!id) { showAlert(alertEl, 'No card ID specified.'); loading.classList.add('hidden'); }
+else loadCard();
+
+async function loadCard() {
+  try {
+    if (type === 'local') {
+      card = await apiFetch(`/cards/${id}`);
+    } else {
+      const res = await fetch(`${YGOPRO_BASE}?id=${encodeURIComponent(id)}`);
+      if (!res.ok) throw new Error('Card not found');
+      const json = await res.json();
+      card = normalizeYgoproCard(json.data[0]);
+    }
+    renderCard();
+  } catch(e) {
+    showAlert(alertEl, e.message || 'Could not load card.');
+  } finally {
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+  }
+}
+
+function renderCard() {
+  const uid     = Auth.getUserId();
+  const canEdit = type === 'local' && (Auth.isAdmin() || (card.ownerId && card.ownerId === uid));
+  const img     = card.imageUrl;
+  const atkDef  = formatAtkDef(card.atk, card.def);
+
+  const stats = [];
+  if (card.attribute) stats.push(`<div class="card-detail-stat"><strong>Attribute</strong> ${escHtml(card.attribute)}</div>`);
+  if (card.race)      stats.push(`<div class="card-detail-stat"><strong>Race</strong> ${escHtml(card.race)}</div>`);
+  if (card.level)     stats.push(`<div class="card-detail-stat"><strong>Level</strong> ${escHtml(card.level)}</div>`);
+  if (card.scale)     stats.push(`<div class="card-detail-stat"><strong>Scale</strong> ${escHtml(card.scale)}</div>`);
+  if (card.linkval)   stats.push(`<div class="card-detail-stat"><strong>Link</strong> ${escHtml(card.linkval)}</div>`);
+  if (atkDef)         stats.push(`<div class="card-detail-stat">${escHtml(atkDef)}</div>`);
+  if (card.archetype) stats.push(`<div class="card-detail-stat"><strong>Archetype</strong> ${escHtml(card.archetype)}</div>`);
+
+  content.innerHTML = `
+    <div class="card-detail">
+      <div>
+        ${img
+          ? `<img class="card-detail-img" src="${escHtml(img)}" alt="${escHtml(card.name)}">`
+          : `<div style="width:100%;aspect-ratio:421/614;background:var(--bg3);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;font-size:5rem;color:var(--text-muted)">🂠</div>`}
+      </div>
+      <div>
+        <div class="card-detail-title">${escHtml(card.name)}</div>
+        <div style="margin-bottom:0.75rem">
+          <span class="badge badge-gold">${escHtml(card.type ?? '')}</span>
+          ${type === 'local' ? '<span class="badge badge-teal" style="margin-left:0.4rem">Custom</span>' : ''}
+        </div>
+        <div class="card-detail-meta">${stats.join('')}</div>
+        ${(card.effect) ? `<div class="card-detail-effect">${escHtml(card.effect)}</div>` : ''}
+
+        ${card.ownerUsername && card.ownerId ? `
+          <div style="margin-top:1rem;font-size:0.85rem;color:var(--text-dim)">
+            Created by <a href="profile.html?id=${escHtml(card.ownerId)}">${escHtml(card.ownerUsername)}</a>
+            ${card.ownerImage ? `<img src="${escHtml(card.ownerImage)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-left:0.4rem">` : ''}
+          </div>` : ''}
+
+        <div class="card-actions">
+          ${canEdit ? `<button class="btn btn-secondary" id="editBtn">Edit Card</button>
+                       <button class="btn btn-danger" id="deleteBtn">Delete Card</button>` : ''}
+          <a href="decks.html" class="btn btn-ghost">View Decks</a>
+        </div>
+      </div>
+    </div>`;
+
+  if (canEdit) {
+    document.getElementById('editBtn').addEventListener('click', openEditModal);
+    document.getElementById('deleteBtn').addEventListener('click', () => document.getElementById('deleteModal').classList.add('open'));
+  }
+}
+
+// ─── Edit Modal ───────────────────────────────────────────────────────────────
+buildTypeSelect(document.getElementById('eType'), false);
+buildOptions(document.getElementById('eLevel'), LEVELS, 'None', null);
+buildOptions(document.getElementById('eAttr'), ATTRIBUTES, 'None', null);
+buildOptions(document.getElementById('eScale'), SCALES, 'None', null);
+buildOptions(document.getElementById('eLinkval'), LINKS, 'None', null);
+
+function openEditModal() {
+  if (!card) return;
+  document.getElementById('eName').value      = card.name ?? '';
+  document.getElementById('eType').value      = card.type ?? '';
+  document.getElementById('eAtk').value       = card.atk ?? '';
+  document.getElementById('eDef').value       = card.def ?? '';
+  document.getElementById('eLevel').value     = card.level ?? '';
+  document.getElementById('eAttr').value      = card.attribute ?? '';
+  document.getElementById('eRace').value      = card.race ?? '';
+  document.getElementById('eArchetype').value = card.archetype ?? '';
+  document.getElementById('eScale').value     = card.scale ?? '';
+  document.getElementById('eLinkval').value   = card.linkval ?? '';
+  document.getElementById('eEffect').value    = card.effect ?? '';
+  document.getElementById('eImageUrl').value  = card.imageUrl ?? '';
+  hideAlert(document.getElementById('editAlert'));
+  document.getElementById('editModal').classList.add('open');
+}
+
+document.getElementById('closeEdit').addEventListener('click', () => document.getElementById('editModal').classList.remove('open'));
+document.getElementById('cancelEdit').addEventListener('click',() => document.getElementById('editModal').classList.remove('open'));
+
+document.getElementById('editForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const editAlertEl = document.getElementById('editAlert');
+  hideAlert(editAlertEl);
+  const name = document.getElementById('eName').value.trim();
+  if (!name) { document.getElementById('eNameErr').textContent = 'Name is required.'; return; }
+  document.getElementById('eNameErr').textContent = '';
+
+  const payload = {
+    name,
+    type:      document.getElementById('eType').value || null,
+    atk:       document.getElementById('eAtk').value  !== '' ? Number(document.getElementById('eAtk').value)  : null,
+    def:       document.getElementById('eDef').value  !== '' ? Number(document.getElementById('eDef').value)  : null,
+    level:     document.getElementById('eLevel').value  !== '' ? Number(document.getElementById('eLevel').value)  : null,
+    attribute: document.getElementById('eAttr').value  || null,
+    race:      document.getElementById('eRace').value.trim()  || null,
+    archetype: document.getElementById('eArchetype').value.trim() || null,
+    scale:     document.getElementById('eScale').value   !== '' ? Number(document.getElementById('eScale').value)   : null,
+    linkval:   document.getElementById('eLinkval').value !== '' ? Number(document.getElementById('eLinkval').value) : null,
+    effect:    document.getElementById('eEffect').value.trim()   || null,
+    imageUrl:  document.getElementById('eImageUrl').value.trim() || null,
+  };
+
+  const btn = document.getElementById('editSaveBtn');
+  setLoading(btn, true, 'Saving…');
+  try {
+    card = await apiFetch(`/cards/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    document.getElementById('editModal').classList.remove('open');
+    showAlert(successEl, 'Card updated successfully!', 'success');
+    renderCard();
+  } catch(err) {
+    showAlert(editAlertEl, err.message || 'Failed to update card.');
+  } finally {
+    setLoading(btn, false);
+  }
+});
+
+// ─── Delete ───────────────────────────────────────────────────────────────────
+document.getElementById('confirmDelete').addEventListener('click', async () => {
+  const btn = document.getElementById('confirmDelete');
+  setLoading(btn, true, 'Deleting…');
+  try {
+    await apiFetch(`/cards/${id}`, { method: 'DELETE' });
+    window.location.href = 'cards.html';
+  } catch(err) {
+    document.getElementById('deleteModal').classList.remove('open');
+    showAlert(alertEl, err.message || 'Failed to delete card.');
+  } finally {
+    setLoading(btn, false);
+  }
+});
+document.getElementById('cancelDelete').addEventListener('click', () => document.getElementById('deleteModal').classList.remove('open'));
+</script>
+</body>
+</html>
