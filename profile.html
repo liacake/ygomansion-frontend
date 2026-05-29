@@ -51,8 +51,8 @@
     <div id="editAlert" class="alert alert-error"></div>
     <form id="editForm">
       <div class="form-group">
-        <label class="form-label">Profile Image URL</label>
-        <input class="form-input" id="eImageUrl" type="url" placeholder="https://…">
+        <label class="form-label">Profile Image</label>
+        <div id="profileImageMount" class="img-widget avatar"></div>
       </div>
       <div class="form-group">
         <label class="form-label">Description</label>
@@ -165,10 +165,17 @@ function renderProfile() {
 }
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
+let profileImageWidget = null;
+
 function openEditModal() {
-  document.getElementById('eImageUrl').value    = user.imageUrl ?? '';
   document.getElementById('eDescription').value = user.description ?? '';
   hideAlert(document.getElementById('editAlert'));
+
+  // Mount avatar widget (square mode via .avatar class already on mount el)
+  profileImageWidget = createImageWidget(document.getElementById('profileImageMount'), {
+    savedUrl: user.imageUrl ?? null,
+  });
+
   document.getElementById('editModal').classList.add('open');
 }
 document.getElementById('closeEdit').addEventListener('click', () => document.getElementById('editModal').classList.remove('open'));
@@ -179,15 +186,21 @@ document.getElementById('editForm').addEventListener('submit', async e => {
   const editAlertEl = document.getElementById('editAlert');
   hideAlert(editAlertEl);
 
-  const payload = {
-    username:    user.username,
-    imageUrl:    document.getElementById('eImageUrl').value.trim() || null,
-    description: document.getElementById('eDescription').value.trim() || null,
-  };
-
   const btn = document.getElementById('editSaveBtn');
   setLoading(btn, true, 'Saving…');
   try {
+    // Upload image file first if a file was chosen
+    let imageValue = profileImageWidget?.getValue() ?? null;
+    if (imageValue && imageValue.startsWith('data:')) {
+      imageValue = await uploadImageIfNeeded('users', userId, imageValue);
+    }
+
+    const payload = {
+      username:    user.username,
+      imageUrl:    imageValue,
+      description: document.getElementById('eDescription').value.trim() || null,
+    };
+
     user = await apiFetch(`/users/${userId}`, { method: 'PUT', body: JSON.stringify(payload) });
     document.getElementById('editModal').classList.remove('open');
     showAlert(successEl, 'Profile updated!', 'success');

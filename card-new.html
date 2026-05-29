@@ -133,9 +133,8 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Image URL</label>
-            <input class="form-input" id="cImageUrl" type="url" placeholder="https://…">
-            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.25rem">Paste any direct image URL. Preview updates automatically.</div>
+            <label class="form-label">Card Image</label>
+            <div id="imageWidgetMount"></div>
           </div>
 
           <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
@@ -202,31 +201,51 @@ typeEl.addEventListener('change', () => {
 });
 updateFieldVisibility();
 
-// Live preview
+// Image widget
+let imageWidget = null;
+function initImageWidget() {
+  imageWidget = createImageWidget(document.getElementById('imageWidgetMount'), {
+    onResult: updatePreview
+  });
+}
+initImageWidget();
+
 function updatePreview() {
   const name     = document.getElementById('cName').value.trim();
   const type     = typeEl.value;
-  const imageUrl = document.getElementById('cImageUrl').value.trim();
+  const imageVal = imageWidget?.getValue() || null;
 
   document.getElementById('previewName').textContent = name || 'Card Name';
   document.getElementById('previewType').textContent = type || 'Type';
 
   const imgArea = document.getElementById('previewImg');
-  if (imageUrl) {
-    imgArea.outerHTML; // replace
+  if (imageVal) {
     const img = document.createElement('img');
     img.id = 'previewImg';
-    img.src = imageUrl;
+    img.src = imageVal;
     img.alt = name;
-    img.onerror = () => { img.outerHTML = `<div id="previewImg" class="card-preview-placeholder">🂠</div>`; };
-    document.getElementById('previewImg')?.replaceWith(img);
+    img.style.cssText = 'width:100%;aspect-ratio:421/614;object-fit:cover;border-radius:var(--radius)';
+    img.onerror = () => {
+      const ph = document.createElement('div');
+      ph.id = 'previewImg';
+      ph.className = 'card-preview-placeholder';
+      ph.textContent = '🂠';
+      img.replaceWith(ph);
+    };
+    imgArea.replaceWith(img);
   } else {
-    const el = document.getElementById('previewImg');
-    if (el.tagName === 'IMG') el.outerHTML = `<div id="previewImg" class="card-preview-placeholder">🂠</div>`;
+    const existing = document.getElementById('previewImg');
+    if (existing && existing.tagName === 'IMG') {
+      const ph = document.createElement('div');
+      ph.id = 'previewImg';
+      ph.className = 'card-preview-placeholder';
+      ph.textContent = '🂠';
+      existing.replaceWith(ph);
+    }
   }
 }
 
-['cName','cType','cImageUrl'].forEach(id => {
+['cName','cType'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', updatePreview);
 });
 
@@ -258,7 +277,7 @@ document.getElementById('cardForm').addEventListener('submit', async e => {
     scale:     document.getElementById('cScale').value   !== '' ? Number(document.getElementById('cScale').value)   : null,
     linkval:   document.getElementById('cLinkval').value !== '' ? Number(document.getElementById('cLinkval').value) : null,
     effect:    document.getElementById('cEffect').value.trim()   || null,
-    imageUrl:  document.getElementById('cImageUrl').value.trim() || null,
+    imageUrl:  imageWidget?.getValue() || null,
   };
 
   const btn = document.getElementById('submitBtn');

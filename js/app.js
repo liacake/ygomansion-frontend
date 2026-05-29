@@ -366,3 +366,124 @@ function requireAuth() {
 
 // ─── URL param helper ─────────────────────────────────────────────────────────
 function getParam(name) { return new URLSearchParams(location.search).get(name); }
+
+// ─── Image Upload Widget ──────────────────────────────────────────────────────
+// Renders an upload widget into `containerEl`.
+// onResult(dataUri) is called whenever a valid image is chosen (file or url).
+// If savedUrl is provided it shows as the current image.
+function createImageWidget(containerEl, { savedUrl = null, onResult } = {}) {
+  containerEl.innerHTML = `
+    <div class="img-widget">
+      <div class="img-widget-preview" id="_iwPreview">
+        ${savedUrl
+          ? `<img src="${escHtml(savedUrl)}" alt="Current image" id="_iwImg">`
+          : `<div class="img-widget-placeholder" id="_iwPlaceholder">🂠<br><span>No image</span></div>`}
+      </div>
+      <div class="img-widget-controls">
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+          Upload file
+          <input type="file" id="_iwFile" accept="image/*" style="display:none">
+        </label>
+        <span class="img-widget-or">or</span>
+        <input class="form-input" id="_iwUrl" type="url"
+               placeholder="Paste image URL…"
+               value="${escHtml(savedUrl && !savedUrl.startsWith('data:') ? savedUrl : '')}">
+        <button class="btn btn-ghost btn-sm" id="_iwClear" type="button" title="Clear image">✕</button>
+      </div>
+      <div class="form-error" id="_iwErr"></div>
+    </div>`;
+
+  const fileInput = containerEl.querySelector('#_iwFile');
+  const urlInput  = containerEl.querySelector('#_iwUrl');
+  const clearBtn  = containerEl.querySelector('#_iwClear');
+  const errEl     = containerEl.querySelector('#_iwErr');
+  let current = savedUrl || null;
+
+  function setPreview(src) {
+    const area = containerEl.querySelector('#_iwPreview');
+    if (src) {
+      area.innerHTML = `<img src="${escHtml(src)}" alt="Preview" id="_iwImg" style="max-width:100%;border-radius:var(--radius)">`;
+    } else {
+      area.innerHTML = `<div class="img-widget-placeholder" id="_iwPlaceholder">🂠<br><span>No image</span></div>`;
+    }
+  }
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      errEl.textContent = 'File too large (max 5 MB).';
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      errEl.textContent = 'Only image files are accepted.';
+      return;
+    }
+    errEl.textContent = '';
+    const reader = new FileReader();
+    reader.onload = e => {
+      current = e.target.result;   // data URI
+      urlInput.value = '';
+      setPreview(current);
+      onResult && onResult(current);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  urlInput.addEventListener('change', () => {
+    const val = urlInput.value.trim();
+    errEl.textContent = '';
+    if (!val) { current = null; setPreview(null); onResult && onResult(null); return; }
+    current = val;
+    setPreview(val);
+    onResult && onResult(val);
+  });
+  urlInput.addEventListener('blur', () => urlInput.dispatchEvent(new Event('change')));
+
+  clearBtn.addEventListener('click', () => {
+    current = null;
+    urlInput.value = '';
+    fileInput.value = '';
+    errEl.textContent = '';
+    setPreview(null);
+    onResult && onResult(null);
+  });
+
+  // Public API
+  return {
+    getValue() { return current; },
+    setValue(src) { current = src; setPreview(src); if (src && !src.startsWith('data:')) urlInput.value = src; },
+  };
+}
+
+// ─── Upload image to server for a saved entity ────────────────────────────────
+// Used after a card/user already exists (has an id).
+// Sends file as multipart if it's a data URI from FileReader;
+// or just returns the URL string to embed in the JSON payload.
+async function uploadImageIfNeeded(entityType, entityId, imageValue) {
+  // entityType = 'cards' | 'users'
+  // imageValue = data URI (needs upload) | http URL (send as-is) | null
+  if (!imageValue) return null;
+  if (!imageValue.startsWith('data:')) return imageValue;   // plain URL → no upload needed
+
+  // Convert data URI back to a Blob and POST as multipart
+  const res  = await fetch(imageValue);
+  const blob = await res.blob();
+  const form = new FormData();
+  form.append('file', blob, 'upload.' + (blob.type.split('/')[1] || 'jpg'));
+
+  const token = Auth.getToken();
+  const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+  const response = await fetch(`${API_BASE}/${entityType}/${entityId}/image`, {
+    method: 'POST',
+    headers,
+    body: form,
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(text || `Image upload failed (${response.status})`);
+  }
+  const data = await response.json();
+  return data.imageUrl;
+}

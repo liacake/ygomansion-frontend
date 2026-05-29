@@ -88,8 +88,8 @@
         <textarea class="form-textarea" id="eEffect" rows="4"></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Image URL</label>
-        <input class="form-input" id="eImageUrl" type="url" placeholder="https://…">
+        <label class="form-label">Card Image</label>
+        <div id="editImageMount"></div>
       </div>
       <div style="display:flex;gap:0.75rem;margin-top:1rem">
         <button class="btn btn-primary" type="submit" id="editSaveBtn">Save Changes</button>
@@ -205,6 +205,8 @@ buildOptions(document.getElementById('eAttr'), ATTRIBUTES, 'None', null);
 buildOptions(document.getElementById('eScale'), SCALES, 'None', null);
 buildOptions(document.getElementById('eLinkval'), LINKS, 'None', null);
 
+let editImageWidget = null;
+
 function openEditModal() {
   if (!card) return;
   document.getElementById('eName').value      = card.name ?? '';
@@ -218,7 +220,12 @@ function openEditModal() {
   document.getElementById('eScale').value     = card.scale ?? '';
   document.getElementById('eLinkval').value   = card.linkval ?? '';
   document.getElementById('eEffect').value    = card.effect ?? '';
-  document.getElementById('eImageUrl').value  = card.imageUrl ?? '';
+
+  // Mount image widget with current image
+  editImageWidget = createImageWidget(document.getElementById('editImageMount'), {
+    savedUrl: card.imageUrl ?? null,
+  });
+
   hideAlert(document.getElementById('editAlert'));
   document.getElementById('editModal').classList.add('open');
 }
@@ -234,24 +241,30 @@ document.getElementById('editForm').addEventListener('submit', async e => {
   if (!name) { document.getElementById('eNameErr').textContent = 'Name is required.'; return; }
   document.getElementById('eNameErr').textContent = '';
 
-  const payload = {
-    name,
-    type:      document.getElementById('eType').value || null,
-    atk:       document.getElementById('eAtk').value  !== '' ? Number(document.getElementById('eAtk').value)  : null,
-    def:       document.getElementById('eDef').value  !== '' ? Number(document.getElementById('eDef').value)  : null,
-    level:     document.getElementById('eLevel').value  !== '' ? Number(document.getElementById('eLevel').value)  : null,
-    attribute: document.getElementById('eAttr').value  || null,
-    race:      document.getElementById('eRace').value.trim()  || null,
-    archetype: document.getElementById('eArchetype').value.trim() || null,
-    scale:     document.getElementById('eScale').value   !== '' ? Number(document.getElementById('eScale').value)   : null,
-    linkval:   document.getElementById('eLinkval').value !== '' ? Number(document.getElementById('eLinkval').value) : null,
-    effect:    document.getElementById('eEffect').value.trim()   || null,
-    imageUrl:  document.getElementById('eImageUrl').value.trim() || null,
-  };
-
   const btn = document.getElementById('editSaveBtn');
   setLoading(btn, true, 'Saving…');
   try {
+    // 1. If a file was chosen (data URI), upload it first to get a server URL
+    let imageValue = editImageWidget?.getValue() ?? null;
+    if (imageValue && imageValue.startsWith('data:')) {
+      imageValue = await uploadImageIfNeeded('cards', id, imageValue);
+    }
+
+    const payload = {
+      name,
+      type:      document.getElementById('eType').value || null,
+      atk:       document.getElementById('eAtk').value  !== '' ? Number(document.getElementById('eAtk').value)  : null,
+      def:       document.getElementById('eDef').value  !== '' ? Number(document.getElementById('eDef').value)  : null,
+      level:     document.getElementById('eLevel').value  !== '' ? Number(document.getElementById('eLevel').value)  : null,
+      attribute: document.getElementById('eAttr').value  || null,
+      race:      document.getElementById('eRace').value.trim()  || null,
+      archetype: document.getElementById('eArchetype').value.trim() || null,
+      scale:     document.getElementById('eScale').value   !== '' ? Number(document.getElementById('eScale').value)   : null,
+      linkval:   document.getElementById('eLinkval').value !== '' ? Number(document.getElementById('eLinkval').value) : null,
+      effect:    document.getElementById('eEffect').value.trim()   || null,
+      imageUrl:  imageValue,
+    };
+
     card = await apiFetch(`/cards/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
     document.getElementById('editModal').classList.remove('open');
     showAlert(successEl, 'Card updated successfully!', 'success');

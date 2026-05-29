@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap');
 
 /* ─── CSS Variables ─────────────────────────────────────────────────── */
 :root {
@@ -38,7 +38,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 1.05rem;
   font-weight: 400;
   background: var(--bg);
@@ -61,7 +61,7 @@ body::before {
 
 /* ─── Typography ────────────────────────────────────────────────────── */
 h1, h2, h3, h4 {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--text-strong);
@@ -138,10 +138,10 @@ main {
 }
 
 .nav-links a {
-  font-family: 'Cinzel', serif;
-  font-size: 0.7rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   color: var(--text-dim);
   padding: 0.45rem 0.8rem;
   border-radius: var(--radius);
@@ -162,11 +162,11 @@ main {
 }
 
 .nav-user {
-  font-family: 'Cinzel', serif;
-  font-size: 0.7rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--gold);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
 }
 
 .hamburger {
@@ -191,10 +191,10 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: 'Cinzel', serif;
-  font-size: 0.7rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   padding: 0.55rem 1.2rem;
   border-radius: var(--radius);
@@ -269,7 +269,7 @@ main {
 .btn-teal { background: var(--amber); color: #080810; border-color: var(--amber); font-weight:700; }
 .btn-teal:hover:not(:disabled) { background: var(--gold); border-color: var(--gold); box-shadow: var(--shadow-gold); color: #080810; }
 
-.btn-sm  { padding: 0.3rem 0.7rem;  font-size: 0.62rem; }
+.btn-sm  { padding: 0.3rem 0.7rem;  font-size: 0.68rem; }
 .btn-lg  { padding: 0.75rem 2rem;   font-size: 0.8rem; }
 
 /* ─── Panels ────────────────────────────────────────────────────────── */
@@ -291,11 +291,11 @@ main {
 }
 
 .panel-title {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--gold);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -352,7 +352,7 @@ main {
 }
 
 .card-item-name {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-strong);
@@ -368,7 +368,7 @@ main {
 .card-item-stats {
   font-size: 0.78rem;
   color: var(--text-dim);
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-weight: 500;
   margin-top: auto;
 }
@@ -397,10 +397,10 @@ main {
 }
 
 .form-label {
-  font-family: 'Cinzel', serif;
-  font-size: 0.65rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
@@ -410,7 +410,7 @@ main {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-strong);
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 1rem;
   font-weight: 400;
   padding: 0.6rem 0.85rem;
@@ -446,7 +446,7 @@ main {
 .form-error {
   font-size: 0.82rem;
   color: var(--red);
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .form-row {
@@ -477,10 +477,10 @@ main {
   display: inline-block;
   padding: 0.15rem 0.55rem;
   border-radius: 20px;
-  font-size: 0.62rem;
-  font-family: 'Cinzel', serif;
+  font-size: 0.68rem;
+  font-family: 'Inter', system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 .badge-gold  { background: rgba(200,144,64,0.14); color: var(--gold);        border: 1px solid var(--gold-dim); }
@@ -496,7 +496,7 @@ main {
   padding: 0.75rem 1rem;
   border-radius: var(--radius);
   font-size: 0.95rem;
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   border: 1px solid;
   margin-bottom: 1rem;
   line-height: 1.5;
@@ -522,7 +522,7 @@ main {
   display: flex;
   align-items: center;
   gap: 1rem;
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.95rem;
   color: var(--gold-light);
   animation: slideDown 0.3s ease;
@@ -553,9 +553,9 @@ main {
   gap: 1rem;
   padding: 4rem;
   color: var(--text-dim);
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.8rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
 }
 
 /* ─── Empty State ───────────────────────────────────────────────────── */
@@ -565,7 +565,7 @@ main {
   color: var(--text-muted);
 }
 .empty-state .empty-icon { font-size: 2.8rem; margin-bottom: 1rem; opacity: 0.6; }
-.empty-state h3 { font-family: 'Cinzel', serif; font-size: 0.9rem; color: var(--text-dim); margin-bottom: 0.5rem; letter-spacing: 0.06em; }
+.empty-state h3 { font-family: 'Inter', system-ui, sans-serif; font-size: 0.9rem; color: var(--text-dim); margin-bottom: 0.5rem; letter-spacing: 0.01em; }
 .empty-state p { font-size: 0.9rem; color: var(--text-muted); }
 
 /* ─── Page Header ───────────────────────────────────────────────────── */
@@ -590,7 +590,7 @@ main {
   color: var(--text-dim);
   font-size: 0.95rem;
   margin-top: 0.2rem;
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* ─── Divider ───────────────────────────────────────────────────────── */
@@ -614,11 +614,11 @@ main {
   background: linear-gradient(90deg, var(--border), transparent);
 }
 .section-title {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--gold);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -670,12 +670,12 @@ main {
 .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 
 .modal-title {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 1rem;
   font-weight: 600;
   color: var(--gold);
   margin-bottom: 1.25rem;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.01em;
 }
 
 /* ─── Pagination / Load more ────────────────────────────────────────── */
@@ -696,12 +696,12 @@ main {
   flex-wrap: wrap;
 }
 .sort-bar label {
-  font-family: 'Cinzel', serif;
-  font-size: 0.65rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-dim);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.03em;
 }
 .sort-bar .form-select { width: auto; min-width: 120px; }
 
@@ -768,7 +768,7 @@ main {
   color: inherit;
 }
 .deck-card-name {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-strong);
@@ -780,7 +780,7 @@ main {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 .deck-card-meta img {
   width: 20px;
@@ -868,7 +868,7 @@ main {
   background: rgba(0,0,0,0.88);
   border: 1px solid var(--gold-dim);
   color: var(--gold);
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.58rem;
   font-weight: 700;
   padding: 1px 5px;
@@ -913,15 +913,15 @@ main {
 }
 .search-result-info { flex: 1; min-width: 0; }
 .search-result-name {
-  font-family: 'Cinzel', serif;
-  font-size: 0.7rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.search-result-type { font-size: 0.78rem; color: var(--gold-dim); font-family: 'EB Garamond', serif; }
+.search-result-type { font-size: 0.78rem; color: var(--gold-dim); font-family: 'Inter', system-ui, sans-serif; }
 
 /* ─── Card Detail ───────────────────────────────────────────────────── */
 .card-detail {
@@ -937,7 +937,7 @@ main {
   border: 1px solid var(--gold-dim);
 }
 .card-detail-title {
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--gold);
@@ -956,7 +956,7 @@ main {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.25rem 0.75rem;
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 .card-detail-stat strong { color: var(--gold-light); font-weight: 600; }
 .card-detail-effect {
@@ -1003,14 +1003,14 @@ main {
   color: var(--text-muted);
   font-size: 0.92rem;
   margin-bottom: 2rem;
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 .auth-switch {
   text-align: center;
   margin-top: 1.5rem;
   font-size: 0.92rem;
   color: var(--text-dim);
-  font-family: 'EB Garamond', serif;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 /* ─── Footer ────────────────────────────────────────────────────────── */
@@ -1020,9 +1020,9 @@ footer {
   text-align: center;
   font-size: 0.8rem;
   color: var(--text-muted);
-  font-family: 'Cinzel', serif;
+  font-family: 'Inter', system-ui, sans-serif;
   font-weight: 400;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
 }
 
 /* ─── Tab bar ───────────────────────────────────────────────────────── */
@@ -1032,10 +1032,10 @@ footer {
   margin-bottom: 1.5rem;
 }
 .tab-btn {
-  font-family: 'Cinzel', serif;
-  font-size: 0.7rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   padding: 0.65rem 1.25rem;
   background: none;
@@ -1108,4 +1108,55 @@ footer {
   .deck-card-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
   .profile-hero { flex-direction: column; align-items: center; text-align: center; }
   .session-banner { white-space: normal; text-align: center; max-width: calc(100vw - 2rem); }
+}
+
+/* ─── Image Upload Widget ───────────────────────────────────────────── */
+.img-widget { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.img-widget-preview {
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 421/614;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.img-widget-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.img-widget-placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 2rem;
+  line-height: 1.4;
+}
+.img-widget-placeholder span { font-size: 0.78rem; display: block; margin-top: 0.25rem; }
+
+.img-widget-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.img-widget-controls .form-input { flex: 1; min-width: 160px; }
+.img-widget-or {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Square preview for profile avatar */
+.img-widget.avatar .img-widget-preview {
+  width: 96px;
+  height: 96px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  max-width: 96px;
 }
