@@ -1,48 +1,153 @@
 // ─── Config ──────────────────────────────────────────────────────────────────
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE    = 'http://localhost:8080/api';
 const YGOPRO_BASE = 'https://db.ygoprodeck.com/api/v7/cardinfo.php';
+
+// ─── JWT helpers ──────────────────────────────────────────────────────────────
+function jwtDecode(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+  } catch { return null; }
+}
+
+function jwtIsExpired(token) {
+  const payload = jwtDecode(token);
+  if (!payload || !payload.exp) return true;          // no expiry claim → treat as expired
+  return Date.now() / 1000 > payload.exp;             // exp is seconds since epoch
+}
 
 // ─── Auth State ───────────────────────────────────────────────────────────────
 const Auth = {
-  getToken()    { return localStorage.getItem('gm_token'); },
-  getUser()     { const u = localStorage.getItem('gm_user'); return u ? JSON.parse(u) : null; },
-  getUserId()   { return this.getUser()?.id ?? null; },
+  getToken() {
+    const t = localStorage.getItem('gm_token');
+    if (!t) return null;
+    // Silently clear if already expired
+    if (jwtIsExpired(t)) { this.clear(); return null; }
+    return t;
+  },
+
+  getUser() {
+    const u = localStorage.getItem('gm_user');
+    return u ? JSON.parse(u) : null;
+  },
+
+  getUserId()   { return this.getUser()?.id   ?? null; },
   getUsername() { return this.getUser()?.username ?? null; },
   hasRole(r)    { return this.getUser()?.roles?.includes(r) ?? false; },
   isAdmin()     { return this.hasRole('ADMIN'); },
 
-  isLoggedIn()  { return !!this.getToken(); },
+  // Returns true only when a valid, non-expired token exists
+  isLoggedIn() { return !!this.getToken(); },
 
   setSession(token) {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const user = { id: payload.userId, username: payload.sub, roles: payload.roles ?? [] };
+    const payload = jwtDecode(token);
+    if (!payload) throw new Error('Invalid token received from server');
+    const user = {
+      id:       payload.userId,
+      username: payload.sub,
+      roles:    payload.roles ?? [],
+      exp:      payload.exp   ?? null,
+    };
     localStorage.setItem('gm_token', token);
     localStorage.setItem('gm_user', JSON.stringify(user));
+    // Schedule auto-logout at expiry
+    this._scheduleExpiry(payload.exp);
+  },
+
+  _expiryTimer: null,
+
+  _scheduleExpiry(exp) {
+    if (this._expiryTimer) clearTimeout(this._expiryTimer);
+    if (!exp) return;
+    const msLeft = exp * 1000 - Date.now();
+    if (msLeft <= 0) { this.clear(); return; }
+    // Show the banner 30 s before expiry if the tab is still open
+    const warnAt = msLeft - 30_000;
+    if (warnAt > 0) {
+      this._expiryTimer = setTimeout(() => showSessionBanner(30), warnAt);
+    }
+    // Hard logout exactly at expiry
+    setTimeout(() => {
+      this.clear();
+      showSessionBanner(0);
+    }, msLeft);
+  },
+
+  // Restore the expiry timer on page load (tab was already open)
+  restoreExpiry() {
+    const t = localStorage.getItem('gm_token');   // raw, before expiry check
+    if (!t) return;
+    const payload = jwtDecode(t);
+    if (payload?.exp) this._scheduleExpiry(payload.exp);
   },
 
   clear() {
     localStorage.removeItem('gm_token');
     localStorage.removeItem('gm_user');
+    if (this._expiryTimer) { clearTimeout(this._expiryTimer); this._expiryTimer = null; }
   },
 
   logout() {
     this.clear();
     window.location.href = 'login.html';
-  }
+  },
 };
+
+// Run expiry check on every page load — clears stale tokens silently
+(function checkOnLoad() {
+  const raw = localStorage.getItem('gm_token');
+  if (raw && jwtIsExpired(raw)) {
+    Auth.clear();
+    // Only show the banner if the page needs auth (will be apparent to the user)
+  } else if (raw) {
+    Auth.restoreExpiry();
+  }
+})();
+
+// ─── Session-expired banner ───────────────────────────────────────────────────
+function showSessionBanner(secondsLeft) {
+  // Remove any existing banner first
+  document.getElementById('_sessionBanner')?.remove();
+
+  const msg = secondsLeft > 0
+    ? `Your session expires in ${secondsLeft}s — save your work.`
+    : 'Your session has expired. Please log in again.';
+
+  const banner = document.createElement('div');
+  banner.id = '_sessionBanner';
+  banner.className = 'session-banner';
+  banner.innerHTML = `
+    <span>⚠ ${escHtml(msg)}</span>
+    ${secondsLeft === 0
+      ? `<a href="login.html" class="btn btn-primary btn-sm">Log in</a>`
+      : `<button class="btn btn-ghost btn-sm" onclick="this.closest('#_sessionBanner').remove()">Dismiss</button>`}
+  `;
+  document.body.appendChild(banner);
+
+  if (secondsLeft > 0) {
+    setTimeout(() => banner.remove(), 15_000);
+  }
+}
 
 // ─── HTTP Helper ──────────────────────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers ?? {}) };
-  const token = Auth.getToken();
+  const token   = Auth.getToken();
+
+  // Token was present but expired → show banner, don't even fire the request
+  if (!token && opts._requiresAuth) {
+    showSessionBanner(0);
+    throw new Error('Session expired');
+  }
+
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
 
   if (res.status === 401) {
+    // Server says token is invalid/expired — clear it and show banner
     Auth.clear();
-    window.location.href = 'login.html';
-    throw new Error('Unauthorized');
+    showSessionBanner(0);
+    throw new Error('Session expired');
   }
 
   if (!res.ok) {
@@ -54,43 +159,40 @@ async function apiFetch(path, opts = {}) {
   return res.json();
 }
 
-// ─── Card Type Definitions ─────────────────────────────────────────────────
+// ─── Card Type Definitions ────────────────────────────────────────────────────
 const CARD_TYPE_GROUPS = [
-  { label: 'Monster', types: ['Normal Monster','Effect Monster','Ritual Monster','Fusion Monster','Synchro Monster','XYZ Monster','Pendulum Effect Monster','Link Monster','Tuner Monster','Flip Effect Monster','Gemini Monster','Spirit Monster','Toon Monster','Union Effect Monster'] },
-  { label: 'Spell',   types: ['Spell Card','Normal Spell Card','Continuous Spell Card','Equip Spell Card','Field Spell Card','Quick-Play Spell Card','Ritual Spell Card'] },
-  { label: 'Trap',    types: ['Trap Card','Normal Trap Card','Continuous Trap Card','Counter Trap Card'] },
+  { label: 'Monster', types: [
+    'Normal Monster','Effect Monster','Ritual Monster','Fusion Monster',
+    'Synchro Monster','XYZ Monster','Pendulum Effect Monster','Link Monster',
+    'Tuner Monster','Flip Effect Monster','Gemini Monster','Spirit Monster',
+    'Toon Monster','Union Effect Monster',
+  ]},
+  { label: 'Spell', types: [
+    'Spell Card','Normal Spell Card','Continuous Spell Card','Equip Spell Card',
+    'Field Spell Card','Quick-Play Spell Card','Ritual Spell Card',
+  ]},
+  { label: 'Trap', types: [
+    'Trap Card','Normal Trap Card','Continuous Trap Card','Counter Trap Card',
+  ]},
 ];
 const ALL_CARD_TYPES = CARD_TYPE_GROUPS.flatMap(g => g.types);
 
-const ATTRIBUTES = ['DARK','EARTH','FIRE','LIGHT','WATER','WIND','DIVINE'];
+const ATTRIBUTES    = ['DARK','EARTH','FIRE','LIGHT','WATER','WIND','DIVINE'];
 const MONSTER_RACES = ['Aqua','Beast','Beast-Warrior','Cyberse','Dinosaur','Divine-Beast','Dragon','Fairy','Fiend','Fish','Insect','Machine','Plant','Psychic','Pyro','Reptile','Rock','Sea Serpent','Spellcaster','Thunder','Warrior','Winged Beast','Wyrm','Zombie'];
-const SPELL_RACES  = ['Normal','Continuous','Equip','Field','Quick-Play','Ritual'];
-const TRAP_RACES   = ['Normal','Continuous','Counter'];
+const SPELL_RACES   = ['Normal','Continuous','Equip','Field','Quick-Play','Ritual'];
+const TRAP_RACES    = ['Normal','Continuous','Counter'];
 
 const LEVELS = [1,2,3,4,5,6,7,8,9,10,11,12];
-const SCALES = Array.from({length:14},(_,i)=>i);
+const SCALES = Array.from({ length: 14 }, (_, i) => i);
 const LINKS  = [1,2,3,4,5,6,7,8];
 
-function canHaveAtk(type) {
-  if (!type) return false;
-  const lo = type.toLowerCase();
-  return !lo.includes('spell') && !lo.includes('trap');
-}
-function canHaveDef(type) {
-  if (!type) return false;
-  const lo = type.toLowerCase();
-  return !lo.includes('spell') && !lo.includes('trap') && !lo.includes('link');
-}
-function canHaveLevel(type) {
-  if (!type) return false;
-  const lo = type.toLowerCase();
-  return !lo.includes('spell') && !lo.includes('trap') && !lo.includes('xyz') && !lo.includes('link') && !lo.includes('pendulum');
-}
-function canHaveScale(type)   { return type?.toLowerCase().includes('pendulum') ?? false; }
-function canHaveLink(type)    { return type?.toLowerCase().includes('link') ?? false; }
+function canHaveAtk(type)   { const lo = type?.toLowerCase() ?? ''; return !lo.includes('spell') && !lo.includes('trap'); }
+function canHaveDef(type)   { const lo = type?.toLowerCase() ?? ''; return !lo.includes('spell') && !lo.includes('trap') && !lo.includes('link'); }
+function canHaveLevel(type) { const lo = type?.toLowerCase() ?? ''; return !lo.includes('spell') && !lo.includes('trap') && !lo.includes('xyz') && !lo.includes('link') && !lo.includes('pendulum'); }
+function canHaveScale(type) { return type?.toLowerCase().includes('pendulum') ?? false; }
+function canHaveLink(type)  { return type?.toLowerCase().includes('link') ?? false; }
 function canHaveRaces(type) {
-  if (!type) return [];
-  const lo = type.toLowerCase();
+  const lo = type?.toLowerCase() ?? '';
   if (lo.includes('spell')) return SPELL_RACES;
   if (lo.includes('trap'))  return TRAP_RACES;
   return MONSTER_RACES;
@@ -105,15 +207,15 @@ function formatAtkDef(atk, def) {
 }
 
 function cardImageSrc(card) {
-  return card.imageUrl || (card.card_images?.[0]?.image_url) || null;
+  return card.imageUrl || card.card_images?.[0]?.image_url || null;
 }
 
 function renderCardItem(card, linkHref) {
-  const img = cardImageSrc(card);
-  const atkDef = formatAtkDef(card.atk, card.def);
-  const ownerName = card.ownerUsername;
-  const ownerId   = card.ownerId;
-  const ownerImg  = card.ownerImage;
+  const img      = cardImageSrc(card);
+  const atkDef   = formatAtkDef(card.atk, card.def);
+  const ownerName= card.ownerUsername;
+  const ownerId  = card.ownerId;
+  const ownerImg = card.ownerImage;
 
   return `
     <a href="${linkHref}" class="card-item">
@@ -133,22 +235,22 @@ function renderCardItem(card, linkHref) {
     </a>`;
 }
 
-// ─── Ygopro card normalizer ───────────────────────────────────────────────────
+// ─── YGOPRODeck normalizer ────────────────────────────────────────────────────
 function normalizeYgoproCard(c) {
   return {
-    id: c.id,
-    name: c.name,
-    type: c.type,
-    atk: c.atk,
-    def: c.def,
-    level: c.level,
-    scale: c.scale,
-    linkval: c.linkval,
+    id:        c.id,
+    name:      c.name,
+    type:      c.type,
+    atk:       c.atk,
+    def:       c.def,
+    level:     c.level,
+    scale:     c.scale,
+    linkval:   c.linkval,
     attribute: c.attribute,
-    race: c.race,
+    race:      c.race,
     archetype: c.archetype,
-    effect: c.desc,
-    imageUrl: c.card_images?.[0]?.image_url ?? null,
+    effect:    c.desc,
+    imageUrl:  c.card_images?.[0]?.image_url ?? null,
   };
 }
 
@@ -156,10 +258,10 @@ function normalizeYgoproCard(c) {
 function escHtml(str) {
   if (str == null) return '';
   return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function showAlert(el, msg, type = 'error') {
@@ -196,11 +298,11 @@ function renderNavbar() {
          <button class="btn btn-secondary btn-sm" onclick="Auth.logout()">Logout</button>
        </li>`
     : `<li class="nav-right">
-         <a href="login.html" class="btn btn-secondary btn-sm">Login</a>
-         <a href="register.html" class="btn btn-primary btn-sm">Register</a>
+         <a href="login.html"    class="btn btn-secondary btn-sm">Login</a>
+         <a href="register.html" class="btn btn-primary   btn-sm">Register</a>
        </li>`;
 
-  const html = `
+  document.getElementById('navbar').innerHTML = `
     <nav class="navbar">
       <div class="nav-inner">
         <a href="index.html" class="nav-brand">☽ Ghost Mansion</a>
@@ -208,8 +310,9 @@ function renderNavbar() {
           <li><a href="index.html">Home</a></li>
           <li><a href="cards.html">Cards</a></li>
           <li><a href="decks.html">Decks</a></li>
-          ${loggedIn ? `<li><a href="card-new.html">+ New Card</a></li>
-                        <li><a href="deck-new.html">+ New Deck</a></li>` : ''}
+          ${loggedIn ? `
+          <li><a href="card-new.html">+ New Card</a></li>
+          <li><a href="deck-new.html">+ New Deck</a></li>` : ''}
           ${authLinks}
         </ul>
         <button class="hamburger" id="hamburger" aria-label="Menu">
@@ -217,8 +320,6 @@ function renderNavbar() {
         </button>
       </div>
     </nav>`;
-
-  document.getElementById('navbar').innerHTML = html;
 
   document.getElementById('hamburger')?.addEventListener('click', () => {
     document.getElementById('navLinks')?.classList.toggle('open');
@@ -235,7 +336,9 @@ function renderFooter() {
 
 // ─── Build select options ─────────────────────────────────────────────────────
 function buildTypeSelect(selectEl, includeAll = true) {
-  let html = includeAll ? '<option value="">All Types</option>' : '<option value="" disabled selected>Select Type</option>';
+  let html = includeAll
+    ? '<option value="">All Types</option>'
+    : '<option value="" disabled selected>Select Type</option>';
   for (const g of CARD_TYPE_GROUPS) {
     html += `<optgroup label="${escHtml(g.label)}">`;
     for (const t of g.types) html += `<option value="${escHtml(t)}">${escHtml(t)}</option>`;
@@ -246,15 +349,20 @@ function buildTypeSelect(selectEl, includeAll = true) {
 
 function buildOptions(selectEl, vals, placeholder = '', selectedVal = null) {
   let html = placeholder ? `<option value="">${escHtml(placeholder)}</option>` : '';
-  for (const v of vals) html += `<option value="${escHtml(v)}" ${String(v) === String(selectedVal) ? 'selected' : ''}>${escHtml(v)}</option>`;
+  for (const v of vals) {
+    html += `<option value="${escHtml(v)}" ${String(v) === String(selectedVal) ? 'selected' : ''}>${escHtml(v)}</option>`;
+  }
   selectEl.innerHTML = html;
 }
 
-// ─── Require auth guard ────────────────────────────────────────────────────────
+// ─── Auth guard ───────────────────────────────────────────────────────────────
 function requireAuth() {
-  if (!Auth.isLoggedIn()) { window.location.href = 'login.html'; return false; }
+  if (!Auth.isLoggedIn()) {
+    window.location.href = 'login.html';
+    return false;
+  }
   return true;
 }
 
-// ─── URL param helpers ────────────────────────────────────────────────────────
+// ─── URL param helper ─────────────────────────────────────────────────────────
 function getParam(name) { return new URLSearchParams(location.search).get(name); }
