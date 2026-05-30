@@ -700,6 +700,31 @@ function updateStats() {
 async function saveDeck() {
   const name = document.getElementById('deckNameInput')?.value.trim() || deckName;
   if (!name) { showAlert(alertEl, 'Please enter a deck name.'); return; }
+
+  // ── Deck size validation (warn but allow save) ───────────────────────────
+  let mainTotal = 0, extraTotal = 0;
+  for (const [key, cnt] of Object.entries(cardCounts)) {
+    if (isExtraDeckMonster(cardData[key])) extraTotal += cnt;
+    else mainTotal += cnt;
+  }
+
+  const warnings = [];
+  if (mainTotal < 40) {
+    warnings.push(`Main Deck has ${mainTotal} cards — minimum is 40 for tournament play.`);
+  } else if (mainTotal > 60) {
+    warnings.push(`Main Deck has ${mainTotal} cards — maximum is 60 for tournament play.`);
+  }
+  if (extraTotal > 15) {
+    warnings.push(`Extra Deck has ${extraTotal} cards — maximum is 15 for tournament play.`);
+  }
+
+  if (warnings.length > 0) {
+    showAlert(warnEl, warnings.join(' '), 'info');
+  } else {
+    hideAlert(warnEl);
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   const ygoprocards = [], localcards = [];
   for (const [key, cnt] of Object.entries(cardCounts)) {
     const rawId = key.split(':')[1];

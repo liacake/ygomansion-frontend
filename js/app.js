@@ -271,12 +271,17 @@ function renderNavbar() {
   const loggedIn = Auth.isLoggedIn();
   const user     = Auth.getUser();
   const authLinks = loggedIn
-    ? `<li class="nav-right">
-         <span class="nav-user">⚔ ${escHtml(user.username)}</span>
+    ? `<li class="nav-right nav-auth">
+         <a href="profile.html?id=${user.id}" class="nav-user" title="${escHtml(user.username)}">
+           ${user.imageUrl
+             ? `<img src="${escHtml(user.imageUrl)}" alt="${escHtml(user.username)}" class="nav-avatar">`
+             : `<span class="nav-avatar-placeholder">${escHtml(user.username[0].toUpperCase())}</span>`}
+           <span class="nav-username">${escHtml(user.username)}</span>
+         </a>
          <a href="profile.html?id=${user.id}" class="btn btn-ghost btn-sm">Profile</a>
          <button class="btn btn-secondary btn-sm" onclick="Auth.logout()">Logout</button>
        </li>`
-    : `<li class="nav-right">
+    : `<li class="nav-right nav-auth">
          <a href="login.html"    class="btn btn-secondary btn-sm">Login</a>
          <a href="register.html" class="btn btn-primary   btn-sm">Register</a>
        </li>`;

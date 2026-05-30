@@ -672,6 +672,79 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
   transform: scale(1.03);
 }
 
+
+/* ─── Navbar Auth — Avatar & Responsive ─────────────────────────────── */
+.nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.nav-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.7rem;
+  background: var(--gold-subtle);
+  border-radius: var(--radius);
+  border: 1px solid var(--gold-dim);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.nav-user:hover {
+  background: rgba(200, 144, 64, 0.12);
+  border-color: var(--gold);
+  color: var(--gold-light);
+}
+
+.nav-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--gold-dim);
+  flex-shrink: 0;
+}
+
+.nav-avatar-placeholder {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dim), var(--bronze));
+  color: #080810;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid var(--gold-dim);
+}
+
+/* Hide username on medium-width to save space, keep avatar */
+@media (max-width: 1100px) {
+  .nav-username {
+    display: none;
+  }
+}
+
+/* At smaller widths, collapse auth buttons into hamburger menu */
+@media (max-width: 900px) {
+  .nav-auth .btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.68rem;
+  }
+}
+
+
+
 /* ─── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .deck-editor { grid-template-columns: 1fr; }
@@ -679,6 +752,46 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
   .card-detail { grid-template-columns: 220px 1fr; gap: 1.5rem; }
   .new-card-layout { grid-template-columns: 1fr; }
   .card-preview { position: static; max-width: 300px; margin: 0 auto; }
+}
+
+
+
+/* ─── New Card/Deck links responsive ────────────────────────────────── */
+@media (max-width: 900px) {
+  .nav-links li a[href*="new"] {
+    display: none;
+  }
+  .nav-links.open li a[href*="new"] {
+    display: block;
+  }
+}
+
+/* ─── Navbar responsive auth collapse ─────────────────────────────────── */
+@media (max-width: 820px) {
+  .nav-auth {
+    display: none;
+  }
+  .nav-links.open .nav-auth {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+    margin-top: 0.5rem;
+  }
+  .nav-links.open .nav-auth .nav-user {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .nav-links.open .nav-auth .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .nav-links.open .nav-auth .nav-username {
+    display: inline;
+  }
 }
 
 @media (max-width: 640px) {
