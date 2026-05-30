@@ -652,6 +652,26 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
 /* Fusion, Synchro, XYZ, Link monsters go to Extra Deck */
 /* All other types (Normal, Effect, Ritual, Spell, Trap) go to Main Deck */
 
+
+/* ─── Deck slot image wrap ─────────────────────────────────────────── */
+.deck-slot-img-wrap {
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: block;
+}
+.deck-slot-img-wrap:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.deck-slot-img-wrap img {
+  transition: transform var(--transition-base);
+  display: block;
+}
+.deck-slot-img-wrap:hover img {
+  transform: scale(1.03);
+}
+
 /* ─── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .deck-editor { grid-template-columns: 1fr; }

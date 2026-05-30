@@ -218,6 +218,76 @@
       letter-spacing: 0.08em;
       margin-top: 0.2rem;
     }
+  
+    /* ── YDK Export ───────────────────────────────────────────── */
+    .sp-export-section {
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sp-export-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text-dim);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: color var(--transition-fast);
+    }
+    .sp-export-toggle:hover { color: var(--text); }
+    .sp-export-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .sp-export-body.open { max-height: 400px; }
+    .sp-export-inner {
+      padding: 0 0.75rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .sp-export-inner .form-group { margin-bottom: 0; }
+    .sp-export-inner .form-label { font-size: 0.6rem; }
+    .ydk-textarea {
+      background: rgba(14, 14, 24, 0.9);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.72rem;
+      padding: 0.6rem;
+      width: 100%;
+      resize: vertical;
+      min-height: 80px;
+      max-height: 200px;
+    }
+    .ydk-textarea:focus { outline: none; border-color: var(--gold-dim); }
+    .export-btn-row { display: flex; gap: 0.4rem; }
+
+  
+    /* ── Deck slot image wrap for click-to-open ─────────────────── */
+    .deck-slot-img-wrap {
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .deck-slot-img-wrap:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+    .deck-slot-img-wrap img {
+      transition: transform var(--transition-base);
+    }
+    .deck-slot-img-wrap:hover img {
+      transform: scale(1.03);
+    }
+
   </style>
 </head>
 <body>
@@ -371,6 +441,28 @@
             </div>
           </div>
 
+
+          <!-- YDK Export collapsible -->
+          <div class="sp-export-section" id="ydkExportArea">
+            <button class="sp-export-toggle" id="ydkExportToggle">
+              <span>YDK Export</span>
+              <span id="ydkExportArrow">▾</span>
+            </button>
+            <div class="sp-export-body" id="ydkExportBody">
+              <div class="sp-export-inner">
+                <div class="form-group">
+                  <label class="form-label">YDK Content</label>
+                  <textarea class="ydk-textarea" id="ydkExportOutput" rows="6" readonly placeholder="Click Export to generate YDK…"></textarea>
+                </div>
+                <div class="export-btn-row">
+                  <button class="btn btn-secondary btn-sm" id="generateYdkBtn">Generate YDK</button>
+                  <button class="btn btn-ghost btn-sm" id="copyYdkBtn">Copy</button>
+                  <button class="btn btn-ghost btn-sm" id="downloadYdkBtn">Download</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div><!-- /search-panel -->
       </div><!-- /deck-editor -->
     </div><!-- /editorWrap -->
@@ -399,9 +491,10 @@ const warnEl     = document.getElementById('warningAlert');
 
 // ── Extra deck detection ──────────────────────────────────────────────────────
 const EXTRA_DECK_TYPES = [
-  'Fusion Monster','Link Monster','Pendulum Effect Fusion Monster',
-  'Synchro Monster','Synchro Pendulum Effect Monster','Synchro Tuner Monster',
+  'Fusion Monster','Pendulum Effect Fusion Monster',
+  'Synchro Monster','Synchro Tuner Monster','Synchro Pendulum Effect Monster',
   'XYZ Monster','XYZ Pendulum Effect Monster',
+  'Link Monster',
 ];
 function isExtraDeckMonster(card) { return EXTRA_DECK_TYPES.includes(card?.type ?? ''); }
 
@@ -496,10 +589,17 @@ function renderEditor() {
 }
 
 // ── Deck canvas ───────────────────────────────────────────────────────────────
-function getSortedKeys(keys, asc) {
+function getSortedKeys(keys, asc, isExtra) {
   return [...keys].sort((a, b) => {
-    const na = (cardData[a]?.name ?? a).toLowerCase();
-    const nb = (cardData[b]?.name ?? b).toLowerCase();
+    const cardA = cardData[a];
+    const cardB = cardData[b];
+    const typeA = cardA?.type ?? '';
+    const typeB = cardB?.type ?? '';
+    const typeIdxA = getTypeSortIndex(typeA, isExtra);
+    const typeIdxB = getTypeSortIndex(typeB, isExtra);
+    if (typeIdxA !== typeIdxB) return asc ? typeIdxA - typeIdxB : typeIdxB - typeIdxA;
+    const na = (cardA?.name ?? a).toLowerCase();
+    const nb = (cardB?.name ?? b).toLowerCase();
     return asc ? na.localeCompare(nb) : nb.localeCompare(na);
   });
 }
@@ -510,32 +610,42 @@ function renderDeckSections() {
     (isExtraDeckMonster(cardData[key]) ? extraKeys : mainKeys).push(key);
   }
 
-  // Main deck
+  // Main deck - two-phase sort: type then name
   const mainGrid = document.getElementById('mainDeckGrid');
-  const sortedMain = getSortedKeys(mainKeys, sortMainAsc);
-  if (!sortedMain.length) {
+  const sortedMain = getSortedKeys(mainKeys, sortMainAsc, false);
+  const mainExpanded = expandKeys(sortedMain);
+  if (!mainExpanded.length) {
     mainGrid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><p>No cards yet.</p></div>`;
   } else {
-    mainGrid.innerHTML = sortedMain.map(k => renderDeckSlot(k, false)).join('');
+    mainGrid.innerHTML = mainExpanded.map((k, i) => renderDeckSlot(k, false, i)).join('');
   }
   document.getElementById('mainDeckCount').textContent =
-    `${sortedMain.reduce((s,k)=>s+cardCounts[k],0)} cards`;
+    `${mainExpanded.length} cards`;
 
-  // Extra deck
+  // Extra deck - two-phase sort: type then name
   const extraGrid = document.getElementById('extraDeckGrid');
-  const sortedExtra = getSortedKeys(extraKeys, sortExtraAsc);
-  if (!sortedExtra.length) {
+  const sortedExtra = getSortedKeys(extraKeys, sortExtraAsc, true);
+  const extraExpanded = expandKeys(sortedExtra);
+  if (!extraExpanded.length) {
     extraGrid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🃏</div><p>No extra deck monsters yet.</p></div>`;
   } else {
-    extraGrid.innerHTML = sortedExtra.map(k => renderDeckSlot(k, true)).join('');
+    extraGrid.innerHTML = extraExpanded.map((k, i) => renderDeckSlot(k, true, i)).join('');
   }
   document.getElementById('extraDeckCount').textContent =
-    `${sortedExtra.reduce((s,k)=>s+cardCounts[k],0)} cards`;
+    `${extraExpanded.length} cards`;
 }
 
-function renderDeckSlot(key, isExtra) {
+function expandKeys(keys) {
+  const result = [];
+  for (const key of keys) {
+    const count = cardCounts[key] ?? 0;
+    for (let i = 0; i < count; i++) result.push(key);
+  }
+  return result;
+}
+
+function renderDeckSlot(key, isExtra, index) {
   const c     = cardData[key];
-  const count = cardCounts[key];
   const img   = c?.imageUrl ?? null;
   const name  = c?.name ?? key;
   const type  = key.startsWith('ygo:') ? 'ygopro' : 'local';
@@ -543,15 +653,16 @@ function renderDeckSlot(key, isExtra) {
   const link  = `card-detail.html?id=${encodeURIComponent(rawId)}&type=${type}`;
 
   return `
-    <div class="deck-slot${isExtra ? ' extra-deck' : ''}" data-key="${escHtml(key)}">
-      ${img
-        ? `<img src="${escHtml(img)}" alt="${escHtml(name)}" title="${escHtml(name)}" onclick="window.location='${link}'">`
-        : `<div style="width:100%;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text-muted);cursor:pointer" onclick="window.location='${link}'">🂠</div>`}
-      ${count > 1 ? `<div class="deck-slot-count">×${count}</div>` : ''}
+    <div class="deck-slot${isExtra ? ' extra-deck' : ''}" data-key="${escHtml(key)}" data-index="${index}">
+      <div class="deck-slot-img-wrap" onclick="window.location='${link}'">
+        ${img
+          ? `<img src="${escHtml(img)}" alt="${escHtml(name)}" title="${escHtml(name)}">`
+          : `<div style="width:100%;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text-muted);cursor:pointer">🂠</div>`}
+      </div>
       ${canEdit ? `
         <div class="deck-slot-controls">
-          <button onclick="changeCount('${escHtml(key)}',-1)" title="Remove one">−</button>
-          <button onclick="changeCount('${escHtml(key)}',+1)" title="Add one">+</button>
+          <button onclick="event.stopPropagation(); changeCount('${escHtml(key)}',-1)" title="Remove one">−</button>
+          <button onclick="event.stopPropagation(); changeCount('${escHtml(key)}',+1)" title="Add one">+</button>
         </div>` : ''}
     </div>`;
 }
@@ -612,6 +723,74 @@ async function saveDeck() {
   } finally { setLoading(btn, false); }
 }
 
+// ── YDK Export ────────────────────────────────────────────────────────────────
+function generateYdk() {
+  const mainIds = [], extraIds = [];
+  for (const key of Object.keys(cardCounts)) {
+    const rawId = key.split(':')[1];
+    const count = cardCounts[key] ?? 0;
+    const isExtra = isExtraDeckMonster(cardData[key]);
+    for (let i = 0; i < count; i++) {
+      if (isExtra) extraIds.push(rawId);
+      else mainIds.push(rawId);
+    }
+  }
+  const lines = ['#created by Ghost Mansion'];
+  lines.push('#main');
+  for (const id of mainIds) lines.push(id);
+  lines.push('#extra');
+  for (const id of extraIds) lines.push(id);
+  lines.push('!side');
+  return lines.join('\n');
+}
+
+function updateExportButton() {
+  const btn = document.getElementById('generateYdkBtn');
+  if (btn) btn.textContent = 'Generate YDK';
+}
+
+function setupYdkExport() {
+  const exportToggle = document.getElementById('ydkExportToggle');
+  const exportBody   = document.getElementById('ydkExportBody');
+  const exportArrow  = document.getElementById('ydkExportArrow');
+
+  exportToggle.addEventListener('click', () => {
+    const open = exportBody.classList.toggle('open');
+    exportArrow.style.transform = open ? 'rotate(180deg)' : '';
+  });
+
+  document.getElementById('generateYdkBtn').addEventListener('click', () => {
+    const ydk = generateYdk();
+    document.getElementById('ydkExportOutput').value = ydk;
+  });
+
+  document.getElementById('copyYdkBtn').addEventListener('click', () => {
+    const el = document.getElementById('ydkExportOutput');
+    if (!el.value) { showAlert(warnEl, 'Generate YDK first.', 'info'); return; }
+    el.select();
+    document.execCommand('copy');
+    const btn = document.getElementById('copyYdkBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+
+  document.getElementById('downloadYdkBtn').addEventListener('click', () => {
+    const ydk = document.getElementById('ydkExportOutput').value;
+    if (!ydk) { showAlert(warnEl, 'Generate YDK first.', 'info'); return; }
+    const name = (document.getElementById('deckNameInput')?.value.trim() || deckName || 'deck').replace(/[^a-z0-9\-_]/gi, '_');
+    const blob = new Blob([ydk], { type: 'text/plain' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `${name}.ydk`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
 // ── Sidebar setup ─────────────────────────────────────────────────────────────
 function setupSidebar() {
   // Source tabs
@@ -651,6 +830,7 @@ function setupSidebar() {
   });
 
   document.getElementById('importYdkBtn').addEventListener('click', importYdk);
+  setupYdkExport();
 }
 
 function clearResults() {
@@ -747,6 +927,7 @@ function addCard(key, card, btn) {
   cardData[key]   = card;
   renderDeckSections();
   updateStats();
+  updateExportButton();
   // Update button in-place
   const next = cardCounts[key];
   btn.disabled  = next >= 3;

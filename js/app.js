@@ -156,6 +156,29 @@ function canHaveRaces(type) {
   return MONSTER_RACES;
 }
 
+// ─── Card Type Ordering for Deck Sorting ────────────────────────────────────────
+const MAIN_DECK_TYPE_ORDER = [
+  'Normal Monster','Effect Monster','Tuner Monster','Flip Effect Monster',
+  'Gemini Monster','Spirit Monster','Toon Monster','Union Effect Monster',
+  'Ritual Monster','Pendulum Effect Monster',
+  'Spell Card','Normal Spell Card','Continuous Spell Card','Equip Spell Card',
+  'Field Spell Card','Quick-Play Spell Card','Ritual Spell Card',
+  'Trap Card','Normal Trap Card','Continuous Trap Card','Counter Trap Card',
+];
+
+const EXTRA_DECK_TYPE_ORDER = [
+  'Fusion Monster','Pendulum Effect Fusion Monster',
+  'Synchro Monster','Synchro Tuner Monster','Synchro Pendulum Effect Monster',
+  'XYZ Monster','XYZ Pendulum Effect Monster',
+  'Link Monster',
+];
+
+function getTypeSortIndex(type, isExtra) {
+  const order = isExtra ? EXTRA_DECK_TYPE_ORDER : MAIN_DECK_TYPE_ORDER;
+  const idx = order.indexOf(type);
+  return idx >= 0 ? idx : 999;
+}
+
 // ─── Format helpers ───────────────────────────────────────────────────────────
 function formatAtkDef(atk, def) {
   if (atk == null && def == null) return '';
