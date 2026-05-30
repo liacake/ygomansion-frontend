@@ -5,6 +5,220 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deck Editor – Ghost Mansion</title>
   <link rel="stylesheet" href="css/main.css">
+  <style>
+    /* ── Search panel (right column) ─────────────────────────── */
+    .search-panel {
+      background: var(--surface-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 90px;
+      max-height: calc(100vh - 120px);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    /* Source tabs */
+    .sp-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0.3rem 0.3rem 0;
+      gap: 0.2rem;
+      flex-shrink: 0;
+    }
+    .sp-tab {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-family: 'Inter', system-ui, sans-serif;
+      border: none;
+      background: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--transition-base);
+      border-radius: var(--radius) var(--radius) 0 0;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .sp-tab:hover { color: var(--text); }
+    .sp-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+    /* Search input area */
+    .sp-search-area {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .sp-input-row { display: flex; gap: 0.4rem; }
+    .sp-input-row .form-input { flex: 1; }
+
+    /* Advanced filter toggle */
+    .sp-adv-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.68rem;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: color var(--transition-fast);
+    }
+    .sp-adv-toggle:hover { color: var(--text-dim); }
+    .sp-adv-toggle .arr { display: inline-block; transition: transform var(--transition-base); }
+    .sp-adv-toggle.open .arr { transform: rotate(180deg); }
+
+    .sp-adv-filters {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .sp-adv-filters.open { max-height: 240px; }
+    .sp-adv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      padding-top: 0.5rem;
+    }
+    .sp-adv-grid .form-group { margin-bottom: 0; }
+    .sp-adv-grid .form-label { font-size: 0.6rem; }
+    .sp-adv-grid .form-input,
+    .sp-adv-grid .form-select { font-size: 0.82rem; padding: 0.35rem 0.6rem; }
+    .sp-adv-grid .full { grid-column: 1 / -1; }
+
+    /* Results list */
+    .sp-results {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .sp-result-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.4rem 0.5rem;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      background: rgba(14,14,24,0.5);
+      transition: all var(--transition-fast);
+    }
+    .sp-result-item:hover { border-color: var(--border); background: var(--surface2); }
+    .sp-result-img {
+      width: 40px;
+      flex-shrink: 0;
+      aspect-ratio: 421/614;
+      object-fit: cover;
+      border-radius: 3px;
+    }
+    .sp-result-placeholder {
+      width: 40px;
+      flex-shrink: 0;
+      aspect-ratio: 421/614;
+      background: var(--bg3);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+    .sp-result-info { flex: 1; min-width: 0; }
+    .sp-result-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-strong);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sp-result-sub { font-size: 0.67rem; color: var(--text-dim); }
+    .sp-add-btn {
+      width: 26px; height: 26px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      border: 1px solid var(--gold-dim);
+      background: transparent;
+      color: var(--gold);
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all var(--transition-fast);
+    }
+    .sp-add-btn:hover:not(:disabled) { background: var(--gold); color: #000; border-color: var(--gold); }
+    .sp-add-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* YDK import collapsible */
+    .sp-ydk-section {
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sp-ydk-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text-dim);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: color var(--transition-fast);
+    }
+    .sp-ydk-toggle:hover { color: var(--text); }
+    .sp-ydk-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .sp-ydk-body.open { max-height: 300px; overflow-y: auto; }
+    .sp-ydk-inner { padding: 0 0.75rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .sp-ydk-inner .form-group { margin-bottom: 0; }
+    .sp-ydk-inner .form-label { font-size: 0.6rem; }
+
+    /* ── Deck stats ───────────────────────────────────────────── */
+    .deck-stats { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .deck-stat {
+      text-align: center;
+      padding: 0.85rem 1.25rem;
+      background: var(--surface-glass);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+      min-width: 90px;
+      transition: all var(--transition-fast);
+    }
+    .deck-stat:hover { border-color: var(--gold-dim); box-shadow: 0 0 20px rgba(200,144,64,0.06); }
+    .deck-stat-num {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 1.5rem;
+      color: var(--gold);
+      text-shadow: 0 0 20px rgba(200,144,64,0.2);
+    }
+    .deck-stat-label {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 0.2rem;
+    }
+  </style>
 </head>
 <body>
 <div class="page-wrapper">
@@ -14,7 +228,7 @@
       <a href="decks.html" class="btn btn-ghost btn-sm">← Back to Decks</a>
     </div>
 
-    <div id="alert" class="alert alert-error"></div>
+    <div id="alert"        class="alert alert-error"></div>
     <div id="successAlert" class="alert alert-success"></div>
     <div id="warningAlert" class="alert alert-info"></div>
 
@@ -22,71 +236,144 @@
 
     <div id="editorWrap" class="hidden">
       <div class="page-header">
-        <div id="deckTitleArea">
-          <!-- filled by JS -->
-        </div>
+        <div id="deckTitleArea"><!-- filled by JS --></div>
         <div id="saveArea" class="hidden">
           <button class="btn btn-primary" id="saveDeckBtn">Save Deck</button>
         </div>
       </div>
 
+      <!-- Stats row -->
       <div class="deck-stats">
-        <div class="deck-stat"><div class="deck-stat-num" id="totalCount">0</div><div class="deck-stat-label">Total</div></div>
-        <div class="deck-stat"><div class="deck-stat-num" id="ygoproCountNum">0</div><div class="deck-stat-label">Official</div></div>
-        <div class="deck-stat"><div class="deck-stat-num" id="localCountNum">0</div><div class="deck-stat-label">Custom</div></div>
+        <div class="deck-stat">
+          <div class="deck-stat-num" id="totalCount">0</div>
+          <div class="deck-stat-label">Total</div>
+        </div>
+        <div class="deck-stat">
+          <div class="deck-stat-num" id="mainCountNum">0</div>
+          <div class="deck-stat-label">Main</div>
+        </div>
+        <div class="deck-stat">
+          <div class="deck-stat-num" id="extraCountNum">0</div>
+          <div class="deck-stat-label">Extra</div>
+        </div>
       </div>
 
       <div class="deck-editor">
-        <!-- Deck canvas -->
+        <!-- Deck canvas with Main + Extra sections -->
         <div class="deck-canvas">
-          <div class="panel-header">
-            <span class="panel-title">Deck Cards</span>
+
+          <!-- Main Deck -->
+          <div class="deck-section" id="mainDeckSection">
+            <div class="deck-section-header">
+              <div class="deck-section-title">
+                Main Deck
+                <span class="deck-section-count" id="mainDeckCount">0 cards</span>
+              </div>
+              <button class="deck-sort-btn" id="sortMainBtn">⇅ Sort A–Z</button>
+            </div>
+            <div id="mainDeckGrid" class="deck-card-grid">
+              <div class="empty-state" style="grid-column:1/-1">
+                <div class="empty-icon">🂠</div>
+                <p>No cards yet. Search and add cards from the panel →</p>
+              </div>
+            </div>
           </div>
-          <div id="deckCardGrid" class="deck-card-grid">
-            <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><p>No cards yet. Add some from the search panel →</p></div>
+
+          <!-- Extra Deck -->
+          <div class="deck-section" id="extraDeckSection">
+            <div class="deck-section-header">
+              <div class="deck-section-title">
+                Extra Deck
+                <span class="deck-section-count" id="extraDeckCount">0 cards</span>
+              </div>
+              <button class="deck-sort-btn" id="sortExtraBtn">⇅ Sort A–Z</button>
+            </div>
+            <div id="extraDeckGrid" class="deck-card-grid">
+              <div class="empty-state" style="grid-column:1/-1">
+                <div class="empty-icon">🃏</div>
+                <p>No extra deck monsters yet.</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="deck-sidebar" id="editorSidebar">
-          <div class="section-header"><span class="section-title">Search Cards</span></div>
+        <!-- Search panel -->
+        <div class="search-panel" id="editorSidebar">
 
-          <div class="tabs">
-            <button class="tab-btn active" data-stab="ygopro">Official</button>
-            <button class="tab-btn" data-stab="local">Custom</button>
+          <!-- Source tabs -->
+          <div class="sp-tabs">
+            <button class="sp-tab active" data-stab="ygopro">Official</button>
+            <button class="sp-tab" data-stab="local">Custom</button>
           </div>
 
-          <div id="stab-ygopro" class="tab-panel active">
-            <div class="form-group">
-              <input class="form-input" id="searchYgopro" placeholder="Card name…">
+          <!-- Search input + advanced filters -->
+          <div class="sp-search-area">
+            <div class="sp-input-row">
+              <input class="form-input" id="spSearchInput" placeholder="Search by name…" autocomplete="off">
+              <button class="btn btn-primary btn-sm" id="spSearchBtn">Go</button>
             </div>
-            <button class="btn btn-primary btn-sm" id="searchYgoproBtn" style="width:100%;justify-content:center">Search</button>
-            <div id="ygoproResults" class="search-results-list"></div>
+
+            <button class="sp-adv-toggle" id="spAdvToggle">
+              <span class="arr">▾</span> Advanced filters
+            </button>
+
+            <div class="sp-adv-filters" id="spAdvFilters">
+              <div class="sp-adv-grid">
+                <div class="form-group full">
+                  <label class="form-label">Type</label>
+                  <select class="form-select" id="spType"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Attribute</label>
+                  <select class="form-select" id="spAttr"><option value="">Any</option></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Level</label>
+                  <select class="form-select" id="spLevel"><option value="">Any</option></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">ATK</label>
+                  <input class="form-input" id="spAtk" type="number" min="0" placeholder="e.g. 2500">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">DEF</label>
+                  <input class="form-input" id="spDef" type="number" min="0" placeholder="e.g. 2000">
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div id="stab-local" class="tab-panel">
-            <div class="form-group">
-              <input class="form-input" id="searchLocal" placeholder="Card name…">
+          <!-- Results -->
+          <div class="sp-results" id="spResults">
+            <div style="padding:2rem;text-align:center;font-size:0.82rem;color:var(--text-muted)">
+              Search for a card above
             </div>
-            <button class="btn btn-primary btn-sm" id="searchLocalBtn" style="width:100%;justify-content:center">Search</button>
-            <div id="localResults" class="search-results-list"></div>
           </div>
 
-          <div class="ydk-import" id="ydkArea">
-            <div class="section-header"><span class="section-title">YDK Import</span></div>
-            <div class="form-group">
-              <label class="form-label">Custom Card IDs</label>
-              <textarea class="form-textarea" id="ydkCustom" rows="4" placeholder="Paste local card IDs, one per line…"></textarea>
+          <!-- YDK import collapsible -->
+          <div class="sp-ydk-section" id="ydkArea">
+            <button class="sp-ydk-toggle" id="ydkToggle">
+              <span>YDK / ID Import</span>
+              <span id="ydkArrow">▾</span>
+            </button>
+            <div class="sp-ydk-body" id="ydkBody">
+              <div class="sp-ydk-inner">
+                <div class="form-group">
+                  <label class="form-label">Custom Card IDs (one per line)</label>
+                  <textarea class="form-textarea" id="ydkCustom" rows="3" placeholder="101&#10;102&#10;…"></textarea>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Official Card IDs (one per line)</label>
+                  <textarea class="form-textarea" id="ydkYgopro" rows="3" placeholder="89631139&#10;46986414&#10;…"></textarea>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="importYdkBtn">Import Cards</button>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Official Card IDs (YGOPRO)</label>
-              <textarea class="form-textarea" id="ydkYgopro" rows="4" placeholder="Paste YGOPRO card IDs, one per line…"></textarea>
-            </div>
-            <button class="btn btn-secondary btn-sm" id="importYdkBtn">Import Cards</button>
           </div>
-        </div>
-      </div>
-    </div>
+
+        </div><!-- /search-panel -->
+      </div><!-- /deck-editor -->
+    </div><!-- /editorWrap -->
   </main>
   <div id="footer"></div>
 </div>
@@ -95,12 +382,14 @@
 renderNavbar();
 renderFooter();
 
+// ── State ─────────────────────────────────────────────────────────────────────
 const deckId  = getParam('id');
 const isNew   = !deckId;
-let deck      = null;
-let deckName  = '';
+let deck = null, deckName = '', canEdit = false;
 let cardCounts = {}, cardData = {};
-let canEdit   = false;
+let activeTab     = 'ygopro';
+let sortMainAsc   = true;
+let sortExtraAsc  = true;
 
 const loading    = document.getElementById('loading');
 const editorWrap = document.getElementById('editorWrap');
@@ -108,29 +397,25 @@ const alertEl    = document.getElementById('alert');
 const successEl  = document.getElementById('successAlert');
 const warnEl     = document.getElementById('warningAlert');
 
-// Sidebar tabs
-document.querySelectorAll('[data-stab]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-stab]').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('#editorWrap .tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(`stab-${btn.dataset.stab}`)?.classList.add('active');
-  });
-});
+// ── Extra deck detection ──────────────────────────────────────────────────────
+const EXTRA_DECK_TYPES = [
+  'Fusion Monster','Link Monster','Pendulum Effect Fusion Monster',
+  'Synchro Monster','Synchro Pendulum Effect Monster','Synchro Tuner Monster',
+  'XYZ Monster','XYZ Pendulum Effect Monster',
+];
+function isExtraDeckMonster(card) { return EXTRA_DECK_TYPES.includes(card?.type ?? ''); }
 
+// ── Init ──────────────────────────────────────────────────────────────────────
 init();
 
 async function init() {
   if (isNew) {
     if (!requireAuth()) return;
-    canEdit = true;
-    deck = null;
-    deckName = 'New Deck';
+    canEdit = true; deckName = 'New Deck';
     loading.classList.add('hidden');
     renderEditor();
     return;
   }
-
   try {
     deck = await apiFetch(`/decks/${deckId}`);
     deckName = deck.name ?? '';
@@ -146,38 +431,25 @@ async function init() {
 }
 
 async function loadDeckCards() {
-  cardCounts = {};
-  cardData   = {};
+  cardCounts = {}; cardData = {};
   const promises = [];
-
   for (const rawId of (deck.localcards ?? [])) {
     const key = `local:${rawId}`;
     cardCounts[key] = (cardCounts[key] ?? 0) + 1;
-    if (!cardData[key]) {
-      promises.push(
-        apiFetch(`/cards/${rawId}`)
-          .then(c => { cardData[key] = c; })
-          .catch(() => {})
-      );
-    }
+    if (!cardData[key]) promises.push(apiFetch(`/cards/${rawId}`).then(c => { cardData[key]=c; }).catch(()=>{}));
   }
-
   for (const rawId of (deck.ygoprocards ?? [])) {
     const key = `ygo:${rawId}`;
     cardCounts[key] = (cardCounts[key] ?? 0) + 1;
-    if (!cardData[key]) {
-      promises.push(
-        fetch(`${YGOPRO_BASE}?id=${encodeURIComponent(rawId)}`)
-          .then(r => r.json())
-          .then(j => { if(j.data?.[0]) cardData[key] = normalizeYgoproCard(j.data[0]); })
-          .catch(() => {})
-      );
-    }
+    if (!cardData[key]) promises.push(
+      fetch(`${YGOPRO_BASE}?id=${encodeURIComponent(rawId)}`).then(r=>r.json())
+        .then(j=>{ if(j.data?.[0]) cardData[key]=normalizeYgoproCard(j.data[0]); }).catch(()=>{})
+    );
   }
-
   await Promise.all(promises);
 }
 
+// ── Render editor shell ───────────────────────────────────────────────────────
 function renderEditor() {
   editorWrap.classList.remove('hidden');
   const titleArea = document.getElementById('deckTitleArea');
@@ -187,236 +459,329 @@ function renderEditor() {
     titleArea.innerHTML = `
       <div>
         <div class="page-title" style="font-size:1rem;margin-bottom:0.35rem">Deck Name</div>
-        <input class="form-input" id="deckNameInput" value="${escHtml(deckName)}" style="font-family:'Cinzel',serif;font-size:1.1rem;max-width:320px">
+        <input class="form-input" id="deckNameInput" value="${escHtml(deckName)}" style="font-size:1.05rem;max-width:320px">
         ${deck?.ownerUsername ? `<div class="page-subtitle">by <a href="profile.html?id=${deck.ownerId}">${escHtml(deck.ownerUsername)}</a></div>` : ''}
       </div>`;
     saveArea.classList.remove('hidden');
     document.getElementById('saveDeckBtn').addEventListener('click', saveDeck);
-    document.getElementById('ydkArea').classList.remove('hidden');
   } else {
     titleArea.innerHTML = `
       <div>
         <div class="page-title">${escHtml(deckName)}</div>
         ${deck?.ownerUsername ? `<div class="page-subtitle">by <a href="profile.html?id=${deck.ownerId}">${escHtml(deck.ownerUsername)}</a></div>` : ''}
       </div>`;
-    document.getElementById('ydkArea').classList.add('hidden');
-    document.getElementById('editorSidebar').classList.add('hidden');
+    document.getElementById('editorSidebar').style.display = 'none';
+    document.getElementById('ydkArea').style.display = 'none';
   }
 
-  renderDeckGrid();
+  setupSidebar();
+  renderDeckSections();
   updateStats();
+
+  // Sort buttons
+  document.getElementById('sortMainBtn')?.addEventListener('click', () => {
+    sortMainAsc = !sortMainAsc;
+    const btn = document.getElementById('sortMainBtn');
+    btn.textContent = `⇅ Sort ${sortMainAsc ? 'A–Z' : 'Z–A'}`;
+    btn.classList.toggle('active', !sortMainAsc);
+    renderDeckSections();
+  });
+  document.getElementById('sortExtraBtn')?.addEventListener('click', () => {
+    sortExtraAsc = !sortExtraAsc;
+    const btn = document.getElementById('sortExtraBtn');
+    btn.textContent = `⇅ Sort ${sortExtraAsc ? 'A–Z' : 'Z–A'}`;
+    btn.classList.toggle('active', !sortExtraAsc);
+    renderDeckSections();
+  });
 }
 
-function renderDeckGrid() {
-  const grid = document.getElementById('deckCardGrid');
-  const keys = Object.keys(cardCounts);
-  if (!keys.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><p>No cards yet.</p></div>`;
-    return;
+// ── Deck canvas ───────────────────────────────────────────────────────────────
+function getSortedKeys(keys, asc) {
+  return [...keys].sort((a, b) => {
+    const na = (cardData[a]?.name ?? a).toLowerCase();
+    const nb = (cardData[b]?.name ?? b).toLowerCase();
+    return asc ? na.localeCompare(nb) : nb.localeCompare(na);
+  });
+}
+
+function renderDeckSections() {
+  const mainKeys = [], extraKeys = [];
+  for (const key of Object.keys(cardCounts)) {
+    (isExtraDeckMonster(cardData[key]) ? extraKeys : mainKeys).push(key);
   }
 
-  grid.innerHTML = keys.map(key => {
-    const c    = cardData[key];
-    const count= cardCounts[key];
-    const img  = c?.imageUrl ?? null;
-    const name = c?.name ?? key;
-    const type = key.startsWith('ygo:') ? 'ygopro' : 'local';
-    const rawId= key.split(':')[1];
-    const link = `card-detail.html?id=${encodeURIComponent(rawId)}&type=${type}`;
+  // Main deck
+  const mainGrid = document.getElementById('mainDeckGrid');
+  const sortedMain = getSortedKeys(mainKeys, sortMainAsc);
+  if (!sortedMain.length) {
+    mainGrid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><p>No cards yet.</p></div>`;
+  } else {
+    mainGrid.innerHTML = sortedMain.map(k => renderDeckSlot(k, false)).join('');
+  }
+  document.getElementById('mainDeckCount').textContent =
+    `${sortedMain.reduce((s,k)=>s+cardCounts[k],0)} cards`;
 
-    return `
-      <div class="deck-slot" data-key="${escHtml(key)}">
-        ${img
-          ? `<img src="${escHtml(img)}" alt="${escHtml(name)}" title="${escHtml(name)}" onclick="window.location='${link}'">`
-          : `<div style="width:100%;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text-muted);cursor:pointer" onclick="window.location='${link}'">🂠</div>`}
-        ${count > 1 ? `<div class="deck-slot-count">×${count}</div>` : ''}
-        ${canEdit ? `
-          <div class="deck-slot-controls">
-            <button onclick="changeCount('${escHtml(key)}', -1)" title="Remove one">−</button>
-            <button onclick="changeCount('${escHtml(key)}', +1)" title="Add one">+</button>
-          </div>` : ''}
-      </div>`;
-  }).join('');
+  // Extra deck
+  const extraGrid = document.getElementById('extraDeckGrid');
+  const sortedExtra = getSortedKeys(extraKeys, sortExtraAsc);
+  if (!sortedExtra.length) {
+    extraGrid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🃏</div><p>No extra deck monsters yet.</p></div>`;
+  } else {
+    extraGrid.innerHTML = sortedExtra.map(k => renderDeckSlot(k, true)).join('');
+  }
+  document.getElementById('extraDeckCount').textContent =
+    `${sortedExtra.reduce((s,k)=>s+cardCounts[k],0)} cards`;
+}
+
+function renderDeckSlot(key, isExtra) {
+  const c     = cardData[key];
+  const count = cardCounts[key];
+  const img   = c?.imageUrl ?? null;
+  const name  = c?.name ?? key;
+  const type  = key.startsWith('ygo:') ? 'ygopro' : 'local';
+  const rawId = key.split(':')[1];
+  const link  = `card-detail.html?id=${encodeURIComponent(rawId)}&type=${type}`;
+
+  return `
+    <div class="deck-slot${isExtra ? ' extra-deck' : ''}" data-key="${escHtml(key)}">
+      ${img
+        ? `<img src="${escHtml(img)}" alt="${escHtml(name)}" title="${escHtml(name)}" onclick="window.location='${link}'">`
+        : `<div style="width:100%;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text-muted);cursor:pointer" onclick="window.location='${link}'">🂠</div>`}
+      ${count > 1 ? `<div class="deck-slot-count">×${count}</div>` : ''}
+      ${canEdit ? `
+        <div class="deck-slot-controls">
+          <button onclick="changeCount('${escHtml(key)}',-1)" title="Remove one">−</button>
+          <button onclick="changeCount('${escHtml(key)}',+1)" title="Add one">+</button>
+        </div>` : ''}
+    </div>`;
 }
 
 function changeCount(key, delta) {
-  const cur = cardCounts[key] ?? 0;
+  const cur  = cardCounts[key] ?? 0;
   const next = cur + delta;
-  if (next <= 0) {
-    delete cardCounts[key];
-    delete cardData[key];
-  } else if (next > 3) {
+  if (next <= 0) { delete cardCounts[key]; delete cardData[key]; }
+  else if (next > 3) {
     showAlert(warnEl, 'Maximum 3 copies of a card allowed.', 'info');
-    setTimeout(() => warnEl.classList.remove('show'), 3000);
+    setTimeout(() => warnEl.classList.remove('show'), 2500);
     return;
-  } else {
-    cardCounts[key] = next;
-  }
-  renderDeckGrid();
+  } else { cardCounts[key] = next; }
+  renderDeckSections();
   updateStats();
 }
 
 function updateStats() {
-  let total = 0, ygoTotal = 0, locTotal = 0;
-  for (const [key, cnt] of Object.entries(cardCounts)) {
-    total += cnt;
-    if (key.startsWith('ygo:')) ygoTotal += cnt;
-    else locTotal += cnt;
+  let total=0, mainT=0, extraT=0;
+  for (const [k,v] of Object.entries(cardCounts)) {
+    total += v;
+    (isExtraDeckMonster(cardData[k]) ? extraT : mainT) && (extraT += v) || (mainT += v);
   }
-  document.getElementById('totalCount').textContent = total;
-  document.getElementById('ygoproCountNum').textContent = ygoTotal;
-  document.getElementById('localCountNum').textContent  = locTotal;
+  // recalc cleanly
+  mainT = 0; extraT = 0;
+  for (const [k,v] of Object.entries(cardCounts)) {
+    if (isExtraDeckMonster(cardData[k])) extraT += v; else mainT += v;
+  }
+  document.getElementById('totalCount').textContent   = total;
+  document.getElementById('mainCountNum').textContent  = mainT;
+  document.getElementById('extraCountNum').textContent = extraT;
 }
 
-// ─── Save ─────────────────────────────────────────────────────────────────────
+// ── Save ──────────────────────────────────────────────────────────────────────
 async function saveDeck() {
-  const nameEl = document.getElementById('deckNameInput');
-  const name = nameEl?.value.trim() || deckName;
+  const name = document.getElementById('deckNameInput')?.value.trim() || deckName;
   if (!name) { showAlert(alertEl, 'Please enter a deck name.'); return; }
-
-  const ygoprocards = [];
-  const localcards  = [];
+  const ygoprocards = [], localcards = [];
   for (const [key, cnt] of Object.entries(cardCounts)) {
     const rawId = key.split(':')[1];
-    for (let i = 0; i < cnt; i++) {
-      if (key.startsWith('ygo:')) ygoprocards.push(rawId);
-      else localcards.push(rawId);
-    }
+    for (let i=0; i<cnt; i++) (key.startsWith('ygo:') ? ygoprocards : localcards).push(rawId);
   }
-
-  const payload = { name, ygoprocards, localcards };
   const btn = document.getElementById('saveDeckBtn');
-  setLoading(btn, true, 'Saving…');
-  hideAlert(alertEl);
-
+  setLoading(btn, true, 'Saving…'); hideAlert(alertEl);
   try {
     let saved;
     if (isNew) {
-      saved = await apiFetch('/decks', { method: 'POST', body: JSON.stringify(payload) });
+      saved = await apiFetch('/decks', { method:'POST', body:JSON.stringify({name, ygoprocards, localcards}) });
       showAlert(successEl, 'Deck created! Redirecting…', 'success');
-      setTimeout(() => window.location.href = `deck-editor.html?id=${saved.id}`, 1200);
+      setTimeout(() => window.location.href=`deck-editor.html?id=${saved.id}`, 1200);
     } else {
-      saved = await apiFetch(`/decks/${deckId}`, { method: 'PUT', body: JSON.stringify(payload) });
-      deck = saved;
-      deckName = saved.name;
+      saved = await apiFetch(`/decks/${deckId}`, { method:'PUT', body:JSON.stringify({name, ygoprocards, localcards}) });
+      deck = saved; deckName = saved.name;
       showAlert(successEl, 'Deck saved!', 'success');
     }
   } catch(err) {
     showAlert(alertEl, err.message || 'Failed to save deck.');
-  } finally {
-    setLoading(btn, false);
-  }
+  } finally { setLoading(btn, false); }
 }
 
-// ─── Search YGOPRO ────────────────────────────────────────────────────────────
-async function searchYgopro() {
-  const q = document.getElementById('searchYgopro').value.trim();
-  if (!q) return;
-  const btn = document.getElementById('searchYgoproBtn');
-  const list = document.getElementById('ygoproResults');
-  list.innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
-  setLoading(btn, true, 'Searching…');
+// ── Sidebar setup ─────────────────────────────────────────────────────────────
+function setupSidebar() {
+  // Source tabs
+  document.querySelectorAll('.sp-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.stab;
+      document.querySelectorAll('.sp-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      clearResults();
+    });
+  });
+
+  // Advanced filter toggle
+  const advToggle  = document.getElementById('spAdvToggle');
+  const advFilters = document.getElementById('spAdvFilters');
+  advToggle.addEventListener('click', () => {
+    const open = advFilters.classList.toggle('open');
+    advToggle.classList.toggle('open', open);
+  });
+
+  // Build selects
+  buildTypeSelect(document.getElementById('spType'), true);
+  buildOptions(document.getElementById('spAttr'), ATTRIBUTES, 'Any Attribute');
+  buildOptions(document.getElementById('spLevel'), LEVELS, 'Any Level');
+
+  // Search triggers
+  document.getElementById('spSearchBtn').addEventListener('click', runSearch);
+  document.getElementById('spSearchInput').addEventListener('keydown', e => { if(e.key==='Enter') runSearch(); });
+
+  // YDK toggle
+  const ydkToggle = document.getElementById('ydkToggle');
+  const ydkBody   = document.getElementById('ydkBody');
+  const ydkArrow  = document.getElementById('ydkArrow');
+  ydkToggle.addEventListener('click', () => {
+    const open = ydkBody.classList.toggle('open');
+    ydkArrow.style.transform = open ? 'rotate(180deg)' : '';
+  });
+
+  document.getElementById('importYdkBtn').addEventListener('click', importYdk);
+}
+
+function clearResults() {
+  document.getElementById('spResults').innerHTML =
+    `<div style="padding:2rem;text-align:center;font-size:0.82rem;color:var(--text-muted)">Search for a card above</div>`;
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+async function runSearch() {
+  if (!canEdit) return;
+  const q    = document.getElementById('spSearchInput').value.trim();
+  const list = document.getElementById('spResults');
+  const btn  = document.getElementById('spSearchBtn');
+
+  list.innerHTML = `<div class="loading-center" style="padding:1.5rem"><div class="spinner"></div></div>`;
+  setLoading(btn, true, '…');
+
+  const type  = document.getElementById('spType').value  || null;
+  const attr  = document.getElementById('spAttr').value  || null;
+  const level = document.getElementById('spLevel').value || null;
+  const atk   = document.getElementById('spAtk').value   || null;
+  const def   = document.getElementById('spDef').value   || null;
+
   try {
-    const res = await fetch(`${YGOPRO_BASE}?fname=${encodeURIComponent(q)}&num=10&offset=0`);
-    if (!res.ok) throw new Error('No results');
-    const json = await res.json();
-    const cards = (json.data ?? []).slice(0, 10).map(normalizeYgoproCard);
-    renderSearchResults(list, cards, 'ygo');
+    let cards = [];
+    if (activeTab === 'ygopro') {
+      const p = new URLSearchParams();
+      if (q)     p.set('fname', q);
+      if (type)  p.set('type', type);
+      if (attr)  p.set('attribute', attr);
+      if (level) p.set('level', level);
+      if (atk)   p.set('atk', atk);
+      if (def)   p.set('def', def);
+      const res  = await fetch(`${YGOPRO_BASE}?${p.toString()}`);
+      if (!res.ok) throw new Error('No results');
+      const json = await res.json();
+      cards = (json.data ?? []).slice(0, 20).map(normalizeYgoproCard);
+    } else {
+      const p = new URLSearchParams();
+      if (q)     p.set('name', q);
+      if (type)  p.set('type', type);
+      if (attr)  p.set('attribute', attr);
+      if (level) p.set('level', level);
+      if (atk)   p.set('atk', atk);
+      if (def)   p.set('def', def);
+      const all  = await apiFetch('/cards' + (p.toString() ? '?'+p.toString() : ''));
+      cards = all.slice(0, 20);
+    }
+    renderSearchResults(list, cards, activeTab === 'ygopro' ? 'ygo' : 'local');
   } catch {
-    list.innerHTML = `<div class="text-muted" style="padding:0.5rem;font-size:0.85rem">No results found.</div>`;
+    list.innerHTML = `<div style="padding:1rem;text-align:center;font-size:0.82rem;color:var(--text-muted)">No results found.</div>`;
   } finally {
     setLoading(btn, false);
   }
 }
-
-document.getElementById('searchYgoproBtn').addEventListener('click', searchYgopro);
-document.getElementById('searchYgopro').addEventListener('keydown', e => { if(e.key==='Enter') searchYgopro(); });
-
-// ─── Search Local ─────────────────────────────────────────────────────────────
-async function searchLocal() {
-  const q = document.getElementById('searchLocal').value.trim();
-  const list = document.getElementById('localResults');
-  const btn  = document.getElementById('searchLocalBtn');
-  list.innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
-  setLoading(btn, true, 'Searching…');
-  try {
-    const qs = q ? `?name=${encodeURIComponent(q)}` : '';
-    const cards = await apiFetch(`/cards${qs}`);
-    renderSearchResults(list, cards.slice(0, 10), 'local');
-  } catch(e) {
-    list.innerHTML = `<div class="text-muted" style="padding:0.5rem;font-size:0.85rem">${escHtml(e.message)}</div>`;
-  } finally {
-    setLoading(btn, false);
-  }
-}
-
-document.getElementById('searchLocalBtn').addEventListener('click', searchLocal);
-document.getElementById('searchLocal').addEventListener('keydown', e => { if(e.key==='Enter') searchLocal(); });
 
 function renderSearchResults(container, cards, prefix) {
   if (!cards.length) {
-    container.innerHTML = `<div class="text-muted" style="padding:0.5rem;font-size:0.85rem">No results.</div>`;
+    container.innerHTML = `<div style="padding:1rem;text-align:center;font-size:0.82rem;color:var(--text-muted)">No results.</div>`;
     return;
   }
   container.innerHTML = cards.map(c => {
-    const img = c.imageUrl;
-    const key = `${prefix}:${c.id}`;
+    const key     = `${prefix}:${c.id}`;
+    const cur     = cardCounts[key] ?? 0;
+    const atMax   = cur >= 3;
+    const img     = c.imageUrl;
+    const sub     = [c.type, c.race].filter(Boolean).join(' / ');
+    const isExtra = isExtraDeckMonster(c);
+    const extraBadge = isExtra
+      ? `<span class="badge badge-warm" style="font-size:0.55rem;margin-left:0.25rem">EXTRA</span>`
+      : '';
     return `
-      <div class="search-result-item">
-        ${img ? `<img src="${escHtml(img)}" alt="${escHtml(c.name)}">` : `<div style="width:52px;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--text-muted);flex-shrink:0">🂠</div>`}
-        <div class="search-result-info">
-          <div class="search-result-name" title="${escHtml(c.name)}">${escHtml(c.name)}</div>
-          <div class="search-result-type">${escHtml(c.type ?? '')}</div>
+      <div class="sp-result-item">
+        ${img
+          ? `<img class="sp-result-img" src="${escHtml(img)}" alt="${escHtml(c.name)}">`
+          : `<div class="sp-result-placeholder">🂠</div>`}
+        <div class="sp-result-info">
+          <div class="sp-result-name" title="${escHtml(c.name)}">${escHtml(c.name)}${extraBadge}</div>
+          <div class="sp-result-sub">${escHtml(sub)}</div>
         </div>
-        <button class="btn btn-teal btn-sm" onclick="addCardToDeck('${escHtml(key)}', ${JSON.stringify(c).replace(/"/g,'&quot;')})">+</button>
+        <button class="sp-add-btn" ${atMax?'disabled':''} title="${atMax?'Max 3 copies':'Add to deck'}"
+                onclick="addCard('${escHtml(key)}',${JSON.stringify(c).replace(/"/g,'&quot;')},this)">
+          ${cur > 0 ? `<span style="font-size:0.62rem;font-weight:700">${cur}</span>` : '+'}
+        </button>
       </div>`;
   }).join('');
 }
 
-function addCardToDeck(key, card) {
+function addCard(key, card, btn) {
   if (!canEdit) return;
   const cur = cardCounts[key] ?? 0;
-  if (cur >= 3) {
-    showAlert(warnEl, 'Maximum 3 copies of a card allowed.', 'info');
-    setTimeout(() => warnEl.classList.remove('show'), 3000);
-    return;
-  }
+  if (cur >= 3) return;
   cardCounts[key] = cur + 1;
-  cardData[key] = card;
-  renderDeckGrid();
+  cardData[key]   = card;
+  renderDeckSections();
   updateStats();
+  // Update button in-place
+  const next = cardCounts[key];
+  btn.disabled  = next >= 3;
+  btn.title     = next >= 3 ? 'Max 3 copies' : 'Add to deck';
+  btn.innerHTML = `<span style="font-size:0.62rem;font-weight:700">${next}</span>`;
 }
 
-// ─── YDK Import ───────────────────────────────────────────────────────────────
-document.getElementById('importYdkBtn')?.addEventListener('click', async () => {
+// ── YDK Import ────────────────────────────────────────────────────────────────
+async function importYdk() {
   const customIds = document.getElementById('ydkCustom').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
   const ygoIds    = document.getElementById('ydkYgopro').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
-
+  if (!customIds.length && !ygoIds.length) return;
   const btn = document.getElementById('importYdkBtn');
   setLoading(btn, true, 'Importing…');
-
   const promises = [];
-  for (const rawId of customIds) {
-    const key = `local:${rawId}`;
-    cardCounts[key] = (cardCounts[key] ?? 0) + 1;
-    if (!cardData[key]) promises.push(apiFetch(`/cards/${rawId}`).then(c => { cardData[key]=c; }).catch(()=>{}));
+  for (const id of customIds) {
+    const key = `local:${id}`;
+    cardCounts[key] = (cardCounts[key]??0)+1;
+    if (!cardData[key]) promises.push(apiFetch(`/cards/${id}`).then(c=>{cardData[key]=c;}).catch(()=>{}));
   }
-  for (const rawId of ygoIds) {
-    const key = `ygo:${rawId}`;
-    cardCounts[key] = (cardCounts[key] ?? 0) + 1;
+  for (const id of ygoIds) {
+    const key = `ygo:${id}`;
+    cardCounts[key] = (cardCounts[key]??0)+1;
     if (!cardData[key]) promises.push(
-      fetch(`${YGOPRO_BASE}?id=${encodeURIComponent(rawId)}`).then(r=>r.json()).then(j=>{ if(j.data?.[0]) cardData[key]=normalizeYgoproCard(j.data[0]); }).catch(()=>{})
+      fetch(`${YGOPRO_BASE}?id=${encodeURIComponent(id)}`).then(r=>r.json())
+        .then(j=>{if(j.data?.[0]) cardData[key]=normalizeYgoproCard(j.data[0]);}).catch(()=>{})
     );
   }
-
   await Promise.all(promises);
-  renderDeckGrid();
-  updateStats();
+  renderDeckSections(); updateStats();
   setLoading(btn, false);
-  document.getElementById('ydkCustom').value = '';
-  document.getElementById('ydkYgopro').value = '';
-  showAlert(successEl, `Imported ${customIds.length + ygoIds.length} card IDs.`, 'success');
-});
+  document.getElementById('ydkCustom').value='';
+  document.getElementById('ydkYgopro').value='';
+  showAlert(successEl, `Imported ${customIds.length+ygoIds.length} card IDs.`, 'success');
+}
 </script>
 </body>
 </html>

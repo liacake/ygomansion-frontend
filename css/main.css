@@ -583,6 +583,75 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
 .results-count { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.85rem; }
 .toggle-mine { margin-bottom: 1.25rem; display: flex; gap: 0.85rem; flex-wrap: wrap; }
 
+
+/* ─── Extra Deck Section — New for deck editor ──────────────────────── */
+.deck-section {
+  margin-bottom: 1.5rem;
+}
+.deck-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.deck-section-title {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.deck-section-count {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.deck-sort-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.deck-sort-btn:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: var(--gold-subtle);
+}
+.deck-sort-btn.active {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: var(--gold-subtle);
+}
+
+/* Extra deck cards have a subtle purple/blue tint border */
+.deck-slot.extra-deck img {
+  border: 1px solid rgba(138, 90, 200, 0.3);
+}
+.deck-slot.extra-deck:hover img {
+  border-color: rgba(138, 90, 200, 0.6);
+  box-shadow: 0 0 20px rgba(138, 90, 200, 0.15);
+}
+
+/* ─── Extra Deck Types (from YGOPRODeck API) ────────────────────────── */
+/* Fusion, Synchro, XYZ, Link monsters go to Extra Deck */
+/* All other types (Normal, Effect, Ritual, Spell, Trap) go to Main Deck */
+
 /* ─── Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .deck-editor { grid-template-columns: 1fr; }

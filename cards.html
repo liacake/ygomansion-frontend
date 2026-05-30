@@ -5,6 +5,171 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cards – Ghost Mansion</title>
   <link rel="stylesheet" href="css/main.css">
+  <style>
+    /* ── Search toolbar ───────────────────────────────────────── */
+    .search-toolbar {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .search-main {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+    }
+    .search-main .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1rem;
+      pointer-events: none;
+    }
+    .search-main .form-input { padding-left: 2.2rem; }
+
+    /* ── Filter toggle button ─────────────────────────────────── */
+    .filter-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 0.9rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface-glass);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 600;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+    }
+    .filter-toggle-btn:hover { border-color: var(--gold-dim); color: var(--text); }
+    .filter-toggle-btn.has-filters { border-color: var(--gold-dim); color: var(--gold); background: var(--gold-subtle); }
+    .filter-toggle-btn .arrow { display: inline-block; transition: transform var(--transition-base); }
+    .filter-toggle-btn.open .arrow { transform: rotate(180deg); }
+
+    /* ── Collapsible filter drawer ────────────────────────────── */
+    .filter-drawer {
+      background: var(--surface-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.35s ease, opacity 0.25s ease, margin-bottom 0.25s;
+      margin-bottom: 0;
+    }
+    .filter-drawer.open {
+      max-height: 420px;
+      opacity: 1;
+      margin-bottom: 0.75rem;
+    }
+    .filter-drawer-inner {
+      padding: 1.1rem 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.75rem;
+      align-items: end;
+    }
+    .filter-drawer-inner .form-group { margin-bottom: 0; }
+    .filter-drawer-actions {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0 1.25rem 1rem;
+    }
+
+    /* ── Active filter chips ──────────────────────────────────── */
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem 0.2rem 0.65rem;
+      border-radius: 20px;
+      background: var(--gold-subtle);
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .chip:hover { background: rgba(200,144,64,0.2); }
+    .chip-x { font-size: 0.6rem; opacity: 0.7; }
+
+    /* ── Results + sort toolbar ───────────────────────────────── */
+    .results-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .results-meta { font-size: 0.82rem; color: var(--text-dim); }
+    .results-right { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .sort-inline { display: flex; align-items: center; gap: 0.4rem; }
+    .sort-inline label { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+    .sort-inline .form-select { width: auto; font-size: 0.78rem; padding: 0.35rem 1.8rem 0.35rem 0.6rem; }
+
+    /* ── Pill-style tabs ──────────────────────────────────────── */
+    .card-tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.25rem;
+      background: var(--surface-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 0.3rem;
+      backdrop-filter: blur(8px);
+    }
+    .card-tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 0.55rem 1rem;
+      border-radius: var(--radius);
+      border: none;
+      background: none;
+      font-size: 0.75rem;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all var(--transition-base);
+    }
+    .card-tab-btn:hover { color: var(--text); }
+    .card-tab-btn.active {
+      background: var(--surface2);
+      color: var(--gold);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.4);
+    }
+    .card-tab-btn .tab-count { font-size: 0.65rem; color: var(--text-muted); margin-left: 0.35rem; font-weight: 400; }
+
+    /* ── Mine checkbox ────────────────────────────────────────── */
+    .mine-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      user-select: none;
+      transition: color var(--transition-fast);
+    }
+    .mine-toggle:hover { color: var(--text); }
+    .mine-toggle input[type=checkbox] { accent-color: var(--gold); width: 15px; height: 15px; cursor: pointer; }
+  </style>
 </head>
 <body>
 <div class="page-wrapper">
@@ -20,86 +185,107 @@
       </div>
     </div>
 
-    <!-- Filter Bar -->
-    <div class="filter-bar" id="filterBar">
-      <div class="form-group wide">
-        <label class="form-label">Name</label>
-        <input class="form-input" id="fName" placeholder="Search by name…">
+    <!-- Always-visible search bar -->
+    <div class="search-toolbar">
+      <div class="search-main">
+        <span class="search-icon">⌕</span>
+        <input class="form-input" id="fName" placeholder="Search cards by name…" autocomplete="off">
       </div>
-      <div class="form-group">
-        <label class="form-label">Type</label>
-        <select class="form-select" id="fType"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Attribute</label>
-        <select class="form-select" id="fAttr">
-          <option value="">All</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Race / Spell type</label>
-        <select class="form-select" id="fRace"><option value="">All</option></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Level</label>
-        <select class="form-select" id="fLevel"><option value="">Any</option></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">ATK</label>
-        <input class="form-input" id="fAtk" type="number" min="0" placeholder="e.g. 2500">
-      </div>
-      <div class="form-group">
-        <label class="form-label">DEF</label>
-        <input class="form-input" id="fDef" type="number" min="0" placeholder="e.g. 2000">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Archetype</label>
-        <input class="form-input" id="fArchetype" placeholder="e.g. Blue-Eyes">
-      </div>
+      <button class="filter-toggle-btn" id="filterToggleBtn">
+        Filters <span class="arrow">▾</span>
+      </button>
       <button class="btn btn-primary" id="searchBtn">Search</button>
-      <button class="btn btn-ghost" id="resetBtn">Reset</button>
     </div>
 
-    <!-- Sort bar -->
-    <div class="sort-bar">
-      <label>Sort by</label>
-      <select class="form-select" id="sortField">
-        <option value="">—</option>
-        <option value="name">Name</option>
-        <option value="atk">ATK</option>
-        <option value="def">DEF</option>
-        <option value="level">Level</option>
-      </select>
-      <select class="form-select" id="sortDir">
-        <option value="asc">Ascending</option>
-        <option value="desc">Descending</option>
-      </select>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="local">Custom Cards <span class="tab-count" id="localCount"></span></button>
-      <button class="tab-btn" data-tab="ygopro">YGOPRODeck <span class="tab-count" id="ygoproCount"></span></button>
-    </div>
-
-    <!-- Local cards -->
-    <div class="tab-panel active" id="tab-local">
-      <div class="toggle-mine" id="mineToggleWrap">
-        <button class="btn btn-ghost btn-sm" id="toggleMine">Show Only My Cards</button>
+    <!-- Collapsible advanced filters -->
+    <div class="filter-drawer" id="filterDrawer">
+      <div class="filter-drawer-inner">
+        <div class="form-group">
+          <label class="form-label">Card Type</label>
+          <select class="form-select" id="fType"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Attribute</label>
+          <select class="form-select" id="fAttr"><option value="">All</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Race / Spell type</label>
+          <select class="form-select" id="fRace"><option value="">All</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Level</label>
+          <select class="form-select" id="fLevel"><option value="">Any</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ATK</label>
+          <input class="form-input" id="fAtk" type="number" min="0" placeholder="e.g. 2500">
+        </div>
+        <div class="form-group">
+          <label class="form-label">DEF</label>
+          <input class="form-input" id="fDef" type="number" min="0" placeholder="e.g. 2000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Archetype</label>
+          <input class="form-input" id="fArchetype" placeholder="e.g. Blue-Eyes">
+        </div>
       </div>
-      <div class="results-count" id="localMeta"></div>
+      <div class="filter-drawer-actions">
+        <button class="btn btn-ghost btn-sm" id="resetBtn">Clear all filters</button>
+      </div>
+    </div>
+
+    <!-- Active filter chips -->
+    <div class="filter-chips" id="filterChips"></div>
+
+    <!-- Pill tabs -->
+    <div class="card-tabs">
+      <button class="card-tab-btn active" data-tab="local">
+        Custom Cards <span class="tab-count" id="localCount"></span>
+      </button>
+      <button class="card-tab-btn" data-tab="ygopro">
+        YGOPRODeck <span class="tab-count" id="ygoproCount"></span>
+      </button>
+    </div>
+
+    <!-- Results toolbar -->
+    <div class="results-toolbar">
+      <div class="results-meta" id="resultsMeta"></div>
+      <div class="results-right">
+        <label class="mine-toggle" id="mineToggleWrap">
+          <input type="checkbox" id="toggleMine"> My cards only
+        </label>
+        <div class="sort-inline">
+          <label>Sort</label>
+          <select class="form-select" id="sortField">
+            <option value="">Default</option>
+            <option value="name">Name</option>
+            <option value="atk">ATK</option>
+            <option value="def">DEF</option>
+            <option value="level">Level</option>
+          </select>
+          <select class="form-select" id="sortDir">
+            <option value="asc">↑ Asc</option>
+            <option value="desc">↓ Desc</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="alert" class="alert alert-error"></div>
+
+    <!-- Local cards panel -->
+    <div class="tab-panel active" id="tab-local">
       <div id="localCards" class="card-grid"></div>
-      <div class="load-more-bar" id="localLoadMore">
+      <div class="load-more-bar hidden" id="localLoadMore">
         <button class="btn btn-ghost" id="localShowMore">Show More</button>
         <button class="btn btn-secondary" id="localShowAll">Show All</button>
       </div>
     </div>
 
-    <!-- Ygopro cards -->
+    <!-- Ygopro panel -->
     <div class="tab-panel" id="tab-ygopro">
-      <div class="results-count" id="ygoMeta"></div>
       <div id="ygoproCards" class="card-grid"></div>
-      <div class="load-more-bar" id="ygoproLoadMore">
+      <div class="load-more-bar hidden" id="ygoproLoadMore">
         <button class="btn btn-ghost" id="ygoproShowMore">Show More</button>
         <button class="btn btn-secondary" id="ygoproShowAll">Show All</button>
       </div>
@@ -113,107 +299,153 @@ renderNavbar();
 renderFooter();
 
 if (Auth.isLoggedIn()) document.getElementById('addCardBtn').classList.remove('hidden');
-if (!Auth.isLoggedIn()) document.getElementById('mineToggleWrap').classList.add('hidden');
+if (!Auth.isLoggedIn()) document.getElementById('mineToggleWrap').style.display = 'none';
 
 // Init selects
 buildTypeSelect(document.getElementById('fType'), true);
 buildOptions(document.getElementById('fAttr'), ATTRIBUTES, 'All Attributes');
 buildOptions(document.getElementById('fLevel'), LEVELS, 'Any Level');
-document.getElementById('fType').addEventListener('change', updateRaceOptions);
-updateRaceOptions();
 
-function updateRaceOptions() {
-  const type = document.getElementById('fType').value;
-  const races = canHaveRaces(type);
-  buildOptions(document.getElementById('fRace'), races, 'All');
+document.getElementById('fType').addEventListener('change', () => {
+  buildOptions(document.getElementById('fRace'), canHaveRaces(document.getElementById('fType').value), 'All');
+  renderChips();
+});
+buildOptions(document.getElementById('fRace'), [], 'All');
+
+// ── Filter drawer ─────────────────────────────────────────────────────────────
+const filterToggleBtn = document.getElementById('filterToggleBtn');
+const filterDrawer    = document.getElementById('filterDrawer');
+
+filterToggleBtn.addEventListener('click', () => {
+  const open = filterDrawer.classList.toggle('open');
+  filterToggleBtn.classList.toggle('open', open);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && filterDrawer.classList.contains('open')) {
+    filterDrawer.classList.remove('open');
+    filterToggleBtn.classList.remove('open');
+  }
+});
+
+// ── Filter chips ──────────────────────────────────────────────────────────────
+const FILTER_LABELS = {
+  fName:'Name', fType:'Type', fAttr:'Attribute', fRace:'Race',
+  fLevel:'Level', fAtk:'ATK', fDef:'DEF', fArchetype:'Archetype'
+};
+
+function renderChips() {
+  const chips = document.getElementById('filterChips');
+  const parts = [];
+  for (const [id, label] of Object.entries(FILTER_LABELS)) {
+    const val = document.getElementById(id)?.value?.trim();
+    if (val) parts.push({ id, label, val });
+  }
+  chips.innerHTML = parts.map(p =>
+    `<span class="chip" data-fid="${escHtml(p.id)}">
+       <span>${escHtml(p.label)}: ${escHtml(p.val)}</span>
+       <span class="chip-x">✕</span>
+     </span>`
+  ).join('');
+  chips.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const el = document.getElementById(chip.dataset.fid);
+      if (el) {
+        el.value = '';
+        if (chip.dataset.fid === 'fType') buildOptions(document.getElementById('fRace'), [], 'All');
+      }
+      renderChips();
+      updateFilterToggleState();
+      doSearch();
+    });
+  });
+  updateFilterToggleState();
 }
 
-// State
+function updateFilterToggleState() {
+  const ADVANCED = ['fType','fAttr','fRace','fLevel','fAtk','fDef','fArchetype'];
+  const hasAny = ADVANCED.some(id => document.getElementById(id)?.value?.trim());
+  filterToggleBtn.classList.toggle('has-filters', hasAny);
+}
+
+['fType','fAttr','fRace','fLevel','fAtk','fDef','fArchetype'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', () => { renderChips(); updateFilterToggleState(); });
+  document.getElementById(id)?.addEventListener('input',  () => { renderChips(); updateFilterToggleState(); });
+});
+
+// ── State ─────────────────────────────────────────────────────────────────────
 let localAll = [], localDisplay = [], localShown = 0, localLimit = 20;
 let ygoproAll = [], ygoproShown = 0, ygoproLimit = 20;
-let showMine = false;
 let currentTab = 'local';
 
-// Tabs
-document.querySelectorAll('.tab-btn').forEach(btn => {
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.card-tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     currentTab = btn.dataset.tab;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.card-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(`tab-${currentTab}`).classList.add('active');
+    updateResultsMeta();
   });
 });
 
-// Toggle mine
-document.getElementById('toggleMine')?.addEventListener('click', () => {
-  showMine = !showMine;
-  document.getElementById('toggleMine').textContent = showMine ? 'Show All Cards' : 'Show Only My Cards';
-  applyLocalFilters();
-  renderLocal();
+// ── Mine only ─────────────────────────────────────────────────────────────────
+document.getElementById('toggleMine').addEventListener('change', () => { applyLocalFilters(); renderLocal(); });
+
+// ── Sort ──────────────────────────────────────────────────────────────────────
+document.getElementById('sortField').addEventListener('change', sortAndRenderBoth);
+document.getElementById('sortDir').addEventListener('change',   sortAndRenderBoth);
+
+// ── Search & reset ────────────────────────────────────────────────────────────
+document.getElementById('searchBtn').addEventListener('click', () => { renderChips(); doSearch(); });
+document.getElementById('fName').addEventListener('keydown', e => { if(e.key==='Enter') { renderChips(); doSearch(); } });
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  ['fName','fAtk','fDef','fArchetype'].forEach(id => document.getElementById(id).value = '');
+  ['fType','fAttr','fRace','fLevel'].forEach(id => document.getElementById(id).value = '');
+  buildOptions(document.getElementById('fRace'), [], 'All');
+  renderChips();
+  doSearch();
 });
 
-// Sort
-document.getElementById('sortField').addEventListener('change', () => { sortAndRenderBoth(); });
-document.getElementById('sortDir').addEventListener('change',   () => { sortAndRenderBoth(); });
+// ── Load more ─────────────────────────────────────────────────────────────────
+document.getElementById('localShowMore').addEventListener('click',  () => { localShown  += localLimit;  renderLocal();  });
+document.getElementById('localShowAll').addEventListener('click',   () => { localShown   = localDisplay.length; renderLocal(); });
+document.getElementById('ygoproShowMore').addEventListener('click', () => { ygoproShown += ygoproLimit; renderYgopro(); });
+document.getElementById('ygoproShowAll').addEventListener('click',  () => { ygoproShown  = ygoproAll.length; renderYgopro(); });
 
-// Search
-document.getElementById('searchBtn').addEventListener('click', doSearch);
-document.getElementById('resetBtn').addEventListener('click', resetFilters);
-document.getElementById('fName').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
-
-// Load more
-document.getElementById('localShowMore').addEventListener('click', () => { localShown += localLimit; renderLocal(); });
-document.getElementById('localShowAll').addEventListener('click',  () => { localShown = localDisplay.length; renderLocal(); });
-document.getElementById('ygoproShowMore').addEventListener('click',() => { ygoproShown += ygoproLimit; renderYgopro(); });
-document.getElementById('ygoproShowAll').addEventListener('click', () => { ygoproShown = ygoproAll.length; renderYgopro(); });
-
+// ── Filters helper ────────────────────────────────────────────────────────────
 function getFilters() {
   return {
-    name:      document.getElementById('fName').value.trim() || null,
-    type:      document.getElementById('fType').value || null,
-    attribute: document.getElementById('fAttr').value || null,
-    race:      document.getElementById('fRace').value || null,
-    level:     document.getElementById('fLevel').value || null,
-    atk:       document.getElementById('fAtk').value || null,
-    def:       document.getElementById('fDef').value || null,
+    name:      document.getElementById('fName').value.trim()      || null,
+    type:      document.getElementById('fType').value             || null,
+    attribute: document.getElementById('fAttr').value             || null,
+    race:      document.getElementById('fRace').value             || null,
+    level:     document.getElementById('fLevel').value            || null,
+    atk:       document.getElementById('fAtk').value              || null,
+    def:       document.getElementById('fDef').value              || null,
     archetype: document.getElementById('fArchetype').value.trim() || null,
   };
 }
 
-function resetFilters() {
-  document.getElementById('fName').value = '';
-  document.getElementById('fType').value = '';
-  document.getElementById('fAttr').value = '';
-  document.getElementById('fLevel').value = '';
-  document.getElementById('fAtk').value = '';
-  document.getElementById('fDef').value = '';
-  document.getElementById('fArchetype').value = '';
-  updateRaceOptions();
-  doSearch();
-}
+async function doSearch() { await Promise.all([loadLocal(), loadYgopro()]); }
 
-async function doSearch() {
-  await Promise.all([loadLocal(), loadYgopro()]);
-}
-
-// ─── Local Cards ─────────────────────────────────────────────────────────────
+// ── Local cards ───────────────────────────────────────────────────────────────
 async function loadLocal() {
   const container = document.getElementById('localCards');
   container.innerHTML = `<div class="loading-center" style="grid-column:1/-1"><div class="spinner"></div></div>`;
   const f = getFilters();
-  const params = new URLSearchParams();
-  if (f.name)      params.set('name', f.name);
-  if (f.type)      params.set('type', f.type);
-  if (f.attribute) params.set('attribute', f.attribute);
-  if (f.race)      params.set('race', f.race);
-  if (f.level)     params.set('level', f.level);
-  if (f.atk)       params.set('atk', f.atk);
-  if (f.def)       params.set('def', f.def);
-  if (f.archetype) params.set('archetype', f.archetype);
+  const p = new URLSearchParams();
+  if (f.name)      p.set('name', f.name);
+  if (f.type)      p.set('type', f.type);
+  if (f.attribute) p.set('attribute', f.attribute);
+  if (f.race)      p.set('race', f.race);
+  if (f.level)     p.set('level', f.level);
+  if (f.atk)       p.set('atk', f.atk);
+  if (f.def)       p.set('def', f.def);
+  if (f.archetype) p.set('archetype', f.archetype);
   try {
-    const qs = params.toString();
-    localAll = await apiFetch('/cards' + (qs ? '?' + qs : ''));
+    localAll = await apiFetch('/cards' + (p.toString() ? '?' + p.toString() : ''));
     applyLocalFilters();
     renderLocal();
   } catch(e) {
@@ -222,71 +454,84 @@ async function loadLocal() {
 }
 
 function applyLocalFilters() {
-  const uid = Auth.getUserId();
-  localDisplay = showMine && uid ? localAll.filter(c => c.ownerId === uid) : localAll;
+  const uid      = Auth.getUserId();
+  const mineOnly = document.getElementById('toggleMine').checked;
+  localDisplay   = (mineOnly && uid) ? localAll.filter(c => c.ownerId === uid) : localAll;
   sortCards(localDisplay);
   localShown = localLimit;
-  document.getElementById('localCount').textContent = `(${localDisplay.length})`;
+  document.getElementById('localCount').textContent = localDisplay.length;
 }
 
 function renderLocal() {
   const container = document.getElementById('localCards');
-  const visible = localDisplay.slice(0, localShown);
-  document.getElementById('localMeta').textContent = `Showing ${visible.length} of ${localDisplay.length} cards`;
+  const visible   = localDisplay.slice(0, localShown);
   if (!localDisplay.length) {
-    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🂠</div><h3>No cards found</h3><p>Try adjusting your filters or create a new card.</p></div>`;
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">🂠</div><h3>No cards found</h3>
+      <p>Try adjusting your filters${Auth.isLoggedIn() ? ' or <a href="card-new.html">create a card</a>' : ''}.</p></div>`;
     document.getElementById('localLoadMore').classList.add('hidden');
-    return;
+  } else {
+    container.innerHTML = visible.map(c => renderCardItem(c, `card-detail.html?id=${c.id}&type=local`)).join('');
+    document.getElementById('localLoadMore').classList.toggle('hidden', localDisplay.length <= localShown);
   }
-  container.innerHTML = visible.map(c => renderCardItem(c, `card-detail.html?id=${c.id}&type=local`)).join('');
-  const more = localDisplay.length > localShown;
-  document.getElementById('localLoadMore').classList.toggle('hidden', !more);
+  updateResultsMeta();
 }
 
-// ─── YGOPRODeck ───────────────────────────────────────────────────────────────
+// ── YGOPRODeck ────────────────────────────────────────────────────────────────
 async function loadYgopro() {
   const container = document.getElementById('ygoproCards');
   container.innerHTML = `<div class="loading-center" style="grid-column:1/-1"><div class="spinner"></div></div>`;
   const f = getFilters();
-  const params = new URLSearchParams();
-  if (f.name)      params.set('fname', f.name);
-  if (f.type)      params.set('type', f.type);
-  if (f.attribute) params.set('attribute', f.attribute);
-  if (f.race)      params.set('race', f.race);
-  if (f.level)     params.set('level', f.level);
-  if (f.atk)       params.set('atk', f.atk);
-  if (f.def)       params.set('def', f.def);
-  if (f.archetype) params.set('archetype', f.archetype);
-
+  const p = new URLSearchParams();
+  if (f.name)      p.set('fname', f.name);
+  if (f.type)      p.set('type', f.type);
+  if (f.attribute) p.set('attribute', f.attribute);
+  if (f.race)      p.set('race', f.race);
+  if (f.level)     p.set('level', f.level);
+  if (f.atk)       p.set('atk', f.atk);
+  if (f.def)       p.set('def', f.def);
+  if (f.archetype) p.set('archetype', f.archetype);
   try {
-    const qs = params.toString();
-    const res = await fetch(YGOPRO_BASE + (qs ? '?' + qs : ''));
-    if (!res.ok) throw new Error('No results from YGOPRODeck');
+    const res  = await fetch(YGOPRO_BASE + (p.toString() ? '?' + p.toString() : ''));
+    if (!res.ok) throw new Error('No results');
     const json = await res.json();
-    ygoproAll = (json.data ?? []).map(normalizeYgoproCard);
+    ygoproAll  = (json.data ?? []).map(normalizeYgoproCard);
     sortCards(ygoproAll);
     ygoproShown = ygoproLimit;
     renderYgopro();
-  } catch(e) {
+  } catch {
     ygoproAll = [];
-    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><h3>No results</h3><p>Try different filters.</p></div>`;
+    document.getElementById('ygoproCards').innerHTML =
+      `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><h3>No results</h3><p>Try different filters.</p></div>`;
     document.getElementById('ygoproLoadMore').classList.add('hidden');
-    document.getElementById('ygoproCount').textContent = '(0)';
+    document.getElementById('ygoproCount').textContent = 0;
+    updateResultsMeta();
   }
 }
 
 function renderYgopro() {
   const container = document.getElementById('ygoproCards');
-  const visible = ygoproAll.slice(0, ygoproShown);
-  document.getElementById('ygoMeta').textContent = `Showing ${visible.length} of ${ygoproAll.length} cards`;
-  document.getElementById('ygoproCount').textContent = `(${ygoproAll.length})`;
+  const visible   = ygoproAll.slice(0, ygoproShown);
+  document.getElementById('ygoproCount').textContent = ygoproAll.length;
   if (!ygoproAll.length) {
     container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><h3>No results</h3></div>`;
     document.getElementById('ygoproLoadMore').classList.add('hidden');
-    return;
+  } else {
+    container.innerHTML = visible.map(c => renderCardItem(c, `card-detail.html?id=${c.id}&type=ygopro`)).join('');
+    document.getElementById('ygoproLoadMore').classList.toggle('hidden', ygoproAll.length <= ygoproShown);
   }
-  container.innerHTML = visible.map(c => renderCardItem(c, `card-detail.html?id=${c.id}&type=ygopro`)).join('');
-  document.getElementById('ygoproLoadMore').classList.toggle('hidden', ygoproAll.length <= ygoproShown);
+  updateResultsMeta();
+}
+
+function updateResultsMeta() {
+  const el = document.getElementById('resultsMeta');
+  if (currentTab === 'local') {
+    const shown = Math.min(localShown, localDisplay.length);
+    el.textContent = localDisplay.length ? `Showing ${shown} of ${localDisplay.length} custom cards` : '';
+  } else {
+    const shown = Math.min(ygoproShown, ygoproAll.length);
+    el.textContent = ygoproAll.length ? `Showing ${shown} of ${ygoproAll.length} official cards` : '';
+  }
 }
 
 function sortCards(arr) {
@@ -303,10 +548,9 @@ function sortCards(arr) {
 
 function sortAndRenderBoth() {
   sortCards(localDisplay); localShown = localLimit; renderLocal();
-  sortCards(ygoproAll); ygoproShown = ygoproLimit; renderYgopro();
+  sortCards(ygoproAll);    ygoproShown = ygoproLimit; renderYgopro();
 }
 
-// Initial load
 doSearch();
 </script>
 </body>
