@@ -757,7 +757,7 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
 
 
 /* ─── New Card/Deck links responsive ────────────────────────────────── */
-@media (max-width: 900px) {
+@media (max-width: 1050px) {
   .nav-links li a[href*="new"] {
     display: none;
   }
