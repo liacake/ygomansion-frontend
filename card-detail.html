@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Card Detail – Ghost Mansion</title>
   <link rel="stylesheet" href="css/main.css">
-  <style>
-    .card-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
-    .edit-form { margin-top: 1.5rem; }
-  </style>
 </head>
 <body>
 <div class="page-wrapper">
@@ -117,7 +113,7 @@ renderNavbar();
 renderFooter();
 
 const id   = getParam('id');
-const type = getParam('type'); // 'local' | 'ygopro'
+const type = getParam('type');
 let card = null;
 
 const loading  = document.getElementById('loading');
@@ -221,7 +217,6 @@ function openEditModal() {
   document.getElementById('eLinkval').value   = card.linkval ?? '';
   document.getElementById('eEffect').value    = card.effect ?? '';
 
-  // Mount image widget with current image
   editImageWidget = createImageWidget(document.getElementById('editImageMount'), {
     savedUrl: card.imageUrl ?? null,
   });
@@ -244,7 +239,6 @@ document.getElementById('editForm').addEventListener('submit', async e => {
   const btn = document.getElementById('editSaveBtn');
   setLoading(btn, true, 'Saving…');
   try {
-    // 1. If a file was chosen (data URI), upload it first to get a server URL
     let imageValue = editImageWidget?.getValue() ?? null;
     if (imageValue && imageValue.startsWith('data:')) {
       imageValue = await uploadImageIfNeeded('cards', id, imageValue);

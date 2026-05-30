@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cards – Ghost Mansion</title>
   <link rel="stylesheet" href="css/main.css">
-  <style>
-    .tab-count { color: var(--text-muted); margin-left: 0.4rem; font-size: 0.7em; }
-    .results-count { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 0.75rem; }
-    .toggle-mine { margin-bottom: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
-  </style>
 </head>
 <body>
 <div class="page-wrapper">
@@ -124,7 +119,6 @@ if (!Auth.isLoggedIn()) document.getElementById('mineToggleWrap').classList.add(
 buildTypeSelect(document.getElementById('fType'), true);
 buildOptions(document.getElementById('fAttr'), ATTRIBUTES, 'All Attributes');
 buildOptions(document.getElementById('fLevel'), LEVELS, 'Any Level');
-// Race will be rebuilt on type change
 document.getElementById('fType').addEventListener('change', updateRaceOptions);
 updateRaceOptions();
 
@@ -229,9 +223,7 @@ async function loadLocal() {
 
 function applyLocalFilters() {
   const uid = Auth.getUserId();
-  localDisplay = showMine && uid
-    ? localAll.filter(c => c.ownerId === uid)
-    : localAll;
+  localDisplay = showMine && uid ? localAll.filter(c => c.ownerId === uid) : localAll;
   sortCards(localDisplay);
   localShown = localLimit;
   document.getElementById('localCount').textContent = `(${localDisplay.length})`;
@@ -310,12 +302,8 @@ function sortCards(arr) {
 }
 
 function sortAndRenderBoth() {
-  sortCards(localDisplay);
-  localShown = localLimit;
-  renderLocal();
-  sortCards(ygoproAll);
-  ygoproShown = ygoproLimit;
-  renderYgopro();
+  sortCards(localDisplay); localShown = localLimit; renderLocal();
+  sortCards(ygoproAll); ygoproShown = ygoproLimit; renderYgopro();
 }
 
 // Initial load

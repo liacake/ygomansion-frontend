@@ -11,8 +11,8 @@ function jwtDecode(token) {
 
 function jwtIsExpired(token) {
   const payload = jwtDecode(token);
-  if (!payload || !payload.exp) return true;          // no expiry claim → treat as expired
-  return Date.now() / 1000 > payload.exp;             // exp is seconds since epoch
+  if (!payload || !payload.exp) return true;
+  return Date.now() / 1000 > payload.exp;
 }
 
 // ─── Auth State ───────────────────────────────────────────────────────────────
@@ -20,22 +20,17 @@ const Auth = {
   getToken() {
     const t = localStorage.getItem('gm_token');
     if (!t) return null;
-    // Silently clear if already expired
     if (jwtIsExpired(t)) { this.clear(); return null; }
     return t;
   },
-
   getUser() {
     const u = localStorage.getItem('gm_user');
     return u ? JSON.parse(u) : null;
   },
-
   getUserId()   { return this.getUser()?.id   ?? null; },
   getUsername() { return this.getUser()?.username ?? null; },
   hasRole(r)    { return this.getUser()?.roles?.includes(r) ?? false; },
   isAdmin()     { return this.hasRole('ADMIN'); },
-
-  // Returns true only when a valid, non-expired token exists
   isLoggedIn() { return !!this.getToken(); },
 
   setSession(token) {
@@ -49,55 +44,42 @@ const Auth = {
     };
     localStorage.setItem('gm_token', token);
     localStorage.setItem('gm_user', JSON.stringify(user));
-    // Schedule auto-logout at expiry
     this._scheduleExpiry(payload.exp);
   },
 
   _expiryTimer: null,
-
   _scheduleExpiry(exp) {
     if (this._expiryTimer) clearTimeout(this._expiryTimer);
     if (!exp) return;
     const msLeft = exp * 1000 - Date.now();
     if (msLeft <= 0) { this.clear(); return; }
-    // Show the banner 30 s before expiry if the tab is still open
     const warnAt = msLeft - 30_000;
     if (warnAt > 0) {
       this._expiryTimer = setTimeout(() => showSessionBanner(30), warnAt);
     }
-    // Hard logout exactly at expiry
-    setTimeout(() => {
-      this.clear();
-      showSessionBanner(0);
-    }, msLeft);
+    setTimeout(() => { this.clear(); showSessionBanner(0); }, msLeft);
   },
-
-  // Restore the expiry timer on page load (tab was already open)
   restoreExpiry() {
-    const t = localStorage.getItem('gm_token');   // raw, before expiry check
+    const t = localStorage.getItem('gm_token');
     if (!t) return;
     const payload = jwtDecode(t);
     if (payload?.exp) this._scheduleExpiry(payload.exp);
   },
-
   clear() {
     localStorage.removeItem('gm_token');
     localStorage.removeItem('gm_user');
     if (this._expiryTimer) { clearTimeout(this._expiryTimer); this._expiryTimer = null; }
   },
-
   logout() {
     this.clear();
     window.location.href = 'login.html';
   },
 };
 
-// Run expiry check on every page load — clears stale tokens silently
 (function checkOnLoad() {
   const raw = localStorage.getItem('gm_token');
   if (raw && jwtIsExpired(raw)) {
     Auth.clear();
-    // Only show the banner if the page needs auth (will be apparent to the user)
   } else if (raw) {
     Auth.restoreExpiry();
   }
@@ -105,13 +87,10 @@ const Auth = {
 
 // ─── Session-expired banner ───────────────────────────────────────────────────
 function showSessionBanner(secondsLeft) {
-  // Remove any existing banner first
   document.getElementById('_sessionBanner')?.remove();
-
   const msg = secondsLeft > 0
     ? `Your session expires in ${secondsLeft}s — save your work.`
     : 'Your session has expired. Please log in again.';
-
   const banner = document.createElement('div');
   banner.id = '_sessionBanner';
   banner.className = 'session-banner';
@@ -119,42 +98,23 @@ function showSessionBanner(secondsLeft) {
     <span>⚠ ${escHtml(msg)}</span>
     ${secondsLeft === 0
       ? `<a href="login.html" class="btn btn-primary btn-sm">Log in</a>`
-      : `<button class="btn btn-ghost btn-sm" onclick="this.closest('#_sessionBanner').remove()">Dismiss</button>`}
-  `;
+      : `<button class="btn btn-ghost btn-sm" onclick="this.closest('#_sessionBanner').remove()">Dismiss</button>`}`;
   document.body.appendChild(banner);
-
-  if (secondsLeft > 0) {
-    setTimeout(() => banner.remove(), 15_000);
-  }
+  if (secondsLeft > 0) setTimeout(() => banner.remove(), 15_000);
 }
 
 // ─── HTTP Helper ──────────────────────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers ?? {}) };
   const token   = Auth.getToken();
-
-  // Token was present but expired → show banner, don't even fire the request
-  if (!token && opts._requiresAuth) {
-    showSessionBanner(0);
-    throw new Error('Session expired');
-  }
-
+  if (!token && opts._requiresAuth) { showSessionBanner(0); throw new Error('Session expired'); }
   if (token) headers['Authorization'] = `Bearer ${token}`;
-
   const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
-
-  if (res.status === 401) {
-    // Server says token is invalid/expired — clear it and show banner
-    Auth.clear();
-    showSessionBanner(0);
-    throw new Error('Session expired');
-  }
-
+  if (res.status === 401) { Auth.clear(); showSessionBanner(0); throw new Error('Session expired'); }
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(text || `HTTP ${res.status}`);
   }
-
   if (res.status === 204) return null;
   return res.json();
 }
@@ -176,12 +136,10 @@ const CARD_TYPE_GROUPS = [
   ]},
 ];
 const ALL_CARD_TYPES = CARD_TYPE_GROUPS.flatMap(g => g.types);
-
 const ATTRIBUTES    = ['DARK','EARTH','FIRE','LIGHT','WATER','WIND','DIVINE'];
 const MONSTER_RACES = ['Aqua','Beast','Beast-Warrior','Cyberse','Dinosaur','Divine-Beast','Dragon','Fairy','Fiend','Fish','Insect','Machine','Plant','Psychic','Pyro','Reptile','Rock','Sea Serpent','Spellcaster','Thunder','Warrior','Winged Beast','Wyrm','Zombie'];
 const SPELL_RACES   = ['Normal','Continuous','Equip','Field','Quick-Play','Ritual'];
 const TRAP_RACES    = ['Normal','Continuous','Counter'];
-
 const LEVELS = [1,2,3,4,5,6,7,8,9,10,11,12];
 const SCALES = Array.from({ length: 14 }, (_, i) => i);
 const LINKS  = [1,2,3,4,5,6,7,8];
@@ -216,7 +174,6 @@ function renderCardItem(card, linkHref) {
   const ownerName= card.ownerUsername;
   const ownerId  = card.ownerId;
   const ownerImg = card.ownerImage;
-
   return `
     <a href="${linkHref}" class="card-item">
       ${img
@@ -286,11 +243,10 @@ function setActiveNav() {
   });
 }
 
-// ─── Render Navbar ────────────────────────────────────────────────────────────
+// ─── Render Navbar — Modernized with scroll effect ────────────────────────────
 function renderNavbar() {
   const loggedIn = Auth.isLoggedIn();
   const user     = Auth.getUser();
-
   const authLinks = loggedIn
     ? `<li class="nav-right">
          <span class="nav-user">⚔ ${escHtml(user.username)}</span>
@@ -303,7 +259,7 @@ function renderNavbar() {
        </li>`;
 
   document.getElementById('navbar').innerHTML = `
-    <nav class="navbar">
+    <nav class="navbar" id="mainNavbar">
       <div class="nav-inner">
         <a href="index.html" class="nav-brand">☽ Ghost Mansion</a>
         <ul class="nav-links" id="navLinks">
@@ -322,8 +278,17 @@ function renderNavbar() {
     </nav>`;
 
   document.getElementById('hamburger')?.addEventListener('click', () => {
+    document.getElementById('hamburger').classList.toggle('active');
     document.getElementById('navLinks')?.classList.toggle('open');
   });
+
+  // Scroll effect for navbar
+  const navbar = document.getElementById('mainNavbar');
+  if (navbar) {
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 10);
+    }, { passive: true });
+  }
 
   setActiveNav();
 }
@@ -367,10 +332,7 @@ function requireAuth() {
 // ─── URL param helper ─────────────────────────────────────────────────────────
 function getParam(name) { return new URLSearchParams(location.search).get(name); }
 
-// ─── Image Upload Widget ──────────────────────────────────────────────────────
-// Renders an upload widget into `containerEl`.
-// onResult(dataUri) is called whenever a valid image is chosen (file or url).
-// If savedUrl is provided it shows as the current image.
+// ─── Image Upload Widget — Modernized ──────────────────────────────────────────
 function createImageWidget(containerEl, { savedUrl = null, onResult } = {}) {
   containerEl.innerHTML = `
     <div class="img-widget">
@@ -411,22 +373,11 @@ function createImageWidget(containerEl, { savedUrl = null, onResult } = {}) {
   fileInput.addEventListener('change', () => {
     const file = fileInput.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      errEl.textContent = 'File too large (max 5 MB).';
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      errEl.textContent = 'Only image files are accepted.';
-      return;
-    }
+    if (file.size > 5 * 1024 * 1024) { errEl.textContent = 'File too large (max 5 MB).'; return; }
+    if (!file.type.startsWith('image/')) { errEl.textContent = 'Only image files are accepted.'; return; }
     errEl.textContent = '';
     const reader = new FileReader();
-    reader.onload = e => {
-      current = e.target.result;   // data URI
-      urlInput.value = '';
-      setPreview(current);
-      onResult && onResult(current);
-    };
+    reader.onload = e => { current = e.target.result; urlInput.value = ''; setPreview(current); onResult && onResult(current); };
     reader.readAsDataURL(file);
   });
 
@@ -434,51 +385,30 @@ function createImageWidget(containerEl, { savedUrl = null, onResult } = {}) {
     const val = urlInput.value.trim();
     errEl.textContent = '';
     if (!val) { current = null; setPreview(null); onResult && onResult(null); return; }
-    current = val;
-    setPreview(val);
-    onResult && onResult(val);
+    current = val; setPreview(val); onResult && onResult(val);
   });
   urlInput.addEventListener('blur', () => urlInput.dispatchEvent(new Event('change')));
 
   clearBtn.addEventListener('click', () => {
-    current = null;
-    urlInput.value = '';
-    fileInput.value = '';
-    errEl.textContent = '';
-    setPreview(null);
-    onResult && onResult(null);
+    current = null; urlInput.value = ''; fileInput.value = ''; errEl.textContent = '';
+    setPreview(null); onResult && onResult(null);
   });
 
-  // Public API
-  return {
-    getValue() { return current; },
-    setValue(src) { current = src; setPreview(src); if (src && !src.startsWith('data:')) urlInput.value = src; },
-  };
+  return { getValue() { return current; }, setValue(src) { current = src; setPreview(src); if (src && !src.startsWith('data:')) urlInput.value = src; } };
 }
 
-// ─── Upload image to server for a saved entity ────────────────────────────────
-// Used after a card/user already exists (has an id).
-// Sends file as multipart if it's a data URI from FileReader;
-// or just returns the URL string to embed in the JSON payload.
+// ─── Upload image to server ──────────────────────────────────────────────────
 async function uploadImageIfNeeded(entityType, entityId, imageValue) {
-  // entityType = 'cards' | 'users'
-  // imageValue = data URI (needs upload) | http URL (send as-is) | null
   if (!imageValue) return null;
-  if (!imageValue.startsWith('data:')) return imageValue;   // plain URL → no upload needed
-
-  // Convert data URI back to a Blob and POST as multipart
+  if (!imageValue.startsWith('data:')) return imageValue;
   const res  = await fetch(imageValue);
   const blob = await res.blob();
   const form = new FormData();
   form.append('file', blob, 'upload.' + (blob.type.split('/')[1] || 'jpg'));
-
   const token = Auth.getToken();
   const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-
   const response = await fetch(`${API_BASE}/${entityType}/${entityId}/image`, {
-    method: 'POST',
-    headers,
-    body: form,
+    method: 'POST', headers, body: form,
   });
   if (!response.ok) {
     const text = await response.text().catch(() => '');

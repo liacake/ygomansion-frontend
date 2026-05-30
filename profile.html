@@ -5,28 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile – Ghost Mansion</title>
   <link rel="stylesheet" href="css/main.css">
-  <style>
-    .profile-tabs { margin-top: 2rem; }
-    .stats-row {
-      display: flex;
-      gap: 2rem;
-      flex-wrap: wrap;
-      margin-top: 0.75rem;
-    }
-    .stat-item { text-align: center; }
-    .stat-num {
-      font-family: 'Cinzel Decorative', serif;
-      font-size: 1.4rem;
-      color: var(--gold);
-    }
-    .stat-label {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      font-family: 'Cinzel', serif;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-  </style>
 </head>
 <body>
 <div class="page-wrapper">
@@ -171,7 +149,6 @@ function openEditModal() {
   document.getElementById('eDescription').value = user.description ?? '';
   hideAlert(document.getElementById('editAlert'));
 
-  // Mount avatar widget (square mode via .avatar class already on mount el)
   profileImageWidget = createImageWidget(document.getElementById('profileImageMount'), {
     savedUrl: user.imageUrl ?? null,
   });
@@ -189,7 +166,6 @@ document.getElementById('editForm').addEventListener('submit', async e => {
   const btn = document.getElementById('editSaveBtn');
   setLoading(btn, true, 'Saving…');
   try {
-    // Upload image file first if a file was chosen
     let imageValue = profileImageWidget?.getValue() ?? null;
     if (imageValue && imageValue.startsWith('data:')) {
       imageValue = await uploadImageIfNeeded('users', userId, imageValue);

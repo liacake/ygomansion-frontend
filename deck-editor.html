@@ -5,34 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deck Editor – Ghost Mansion</title>
   <link rel="stylesheet" href="css/main.css">
-  <style>
-    .deck-stats {
-      display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 1rem;
-    }
-    .deck-stat {
-      text-align: center;
-    }
-    .deck-stat-num {
-      font-family: 'Cinzel Decorative', serif;
-      font-size: 1.4rem;
-      color: var(--gold);
-    }
-    .deck-stat-label {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      font-family: 'Cinzel', serif;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .ydk-import {
-      margin-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      padding-top: 1.25rem;
-    }
-  </style>
 </head>
 <body>
 <div class="page-wrapper">
@@ -123,12 +95,10 @@
 renderNavbar();
 renderFooter();
 
-const deckId  = getParam('id'); // null for new deck
+const deckId  = getParam('id');
 const isNew   = !deckId;
 let deck      = null;
 let deckName  = '';
-// cardCounts: { cardKey: count }  cardKey = "local:id" | "ygo:id"
-// cardData:   { cardKey: cardObj }
 let cardCounts = {}, cardData = {};
 let canEdit   = false;
 
@@ -180,7 +150,6 @@ async function loadDeckCards() {
   cardData   = {};
   const promises = [];
 
-  // local cards
   for (const rawId of (deck.localcards ?? [])) {
     const key = `local:${rawId}`;
     cardCounts[key] = (cardCounts[key] ?? 0) + 1;
@@ -193,7 +162,6 @@ async function loadDeckCards() {
     }
   }
 
-  // ygopro cards
   for (const rawId of (deck.ygoprocards ?? [])) {
     const key = `ygo:${rawId}`;
     cardCounts[key] = (cardCounts[key] ?? 0) + 1;
@@ -395,7 +363,7 @@ function renderSearchResults(container, cards, prefix) {
     const key = `${prefix}:${c.id}`;
     return `
       <div class="search-result-item">
-        ${img ? `<img src="${escHtml(img)}" alt="${escHtml(c.name)}">` : `<div style="width:48px;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--text-muted);flex-shrink:0">🂠</div>`}
+        ${img ? `<img src="${escHtml(img)}" alt="${escHtml(c.name)}">` : `<div style="width:52px;aspect-ratio:421/614;background:var(--bg3);display:flex;align-items:center;justify-content:center;color:var(--text-muted);flex-shrink:0">🂠</div>`}
         <div class="search-result-info">
           <div class="search-result-name" title="${escHtml(c.name)}">${escHtml(c.name)}</div>
           <div class="search-result-type">${escHtml(c.type ?? '')}</div>
