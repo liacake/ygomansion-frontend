@@ -73,7 +73,11 @@ async function loadProfile() {
     ]);
     renderProfile();
   } catch(e) {
-    showAlert(alertEl, e.message || 'User not found.');
+    if (!Auth.isLoggedIn()) {
+      showAlert(alertEl, "You need to login to see other users' profiles.");
+    } else {
+      showAlert(alertEl, e.message || 'User not found.');
+    }
   } finally {
     loading.classList.add('hidden');
     content.classList.remove('hidden');
