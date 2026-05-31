@@ -178,7 +178,7 @@ function renderCard() {
           ${type === 'local' ? '<span class="badge badge-teal" style="margin-left:0.4rem">Custom</span>' : ''}
         </div>
         <div class="card-detail-meta">${stats.join('')}</div>
-        ${(card.effect) ? `<div class="card-detail-effect">${escHtml(card.effect)}</div>` : ''}
+        ${(card.effect) ? `<div class="card-detail-effect">${escHtml(card.effect).replace(/\n/g, '<br>')}</div>` : ''}
 
         ${card.ownerUsername && card.ownerId ? `
           <div style="margin-top:1rem;font-size:0.85rem;color:var(--text-dim)">
