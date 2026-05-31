@@ -339,7 +339,7 @@
                 Main Deck
                 <span class="deck-section-count" id="mainDeckCount">0 cards</span>
               </div>
-              <button class="deck-sort-btn" id="sortMainBtn">⇅ Sort A–Z</button>
+              <button class="deck-sort-btn" id="sortMainBtn">Sort</button>
             </div>
             <div id="mainDeckGrid" class="deck-card-grid">
               <div class="empty-state" style="grid-column:1/-1">
@@ -356,7 +356,7 @@
                 Extra Deck
                 <span class="deck-section-count" id="extraDeckCount">0 cards</span>
               </div>
-              <button class="deck-sort-btn" id="sortExtraBtn">⇅ Sort A–Z</button>
+              <button class="deck-sort-btn" id="sortExtraBtn">Sort</button>
             </div>
             <div id="extraDeckGrid" class="deck-card-grid">
               <div class="empty-state" style="grid-column:1/-1">
@@ -598,7 +598,7 @@ function renderEditor() {
   document.getElementById('sortMainBtn')?.addEventListener('click', () => {
     sortMainAsc = !sortMainAsc;
     const btn = document.getElementById('sortMainBtn');
-    btn.textContent = `⇅ Sort ${sortMainAsc ? 'A–Z' : 'Z–A'}`;
+    btn.textContent = `Sort ${sortMainAsc ? '' : ''}`;
     btn.classList.toggle('active', !sortMainAsc);
     renderDeckSections();
   });
@@ -1050,8 +1050,8 @@ function addCard(key, card, btn) {
 
 // ── YDK Import ────────────────────────────────────────────────────────────────
 async function importYdk() {
-  const customIds = document.getElementById('ydkCustom').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
-  const ygoIds    = document.getElementById('ydkYgopro').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+  const customIds = parseYdkLines(document.getElementById('ydkCustom').value);
+  const ygoIds    = parseYdkLines(document.getElementById('ydkYgopro').value);
   if (!customIds.length && !ygoIds.length) return;
   const btn = document.getElementById('importYdkBtn');
   setLoading(btn, true, 'Importing…');
@@ -1075,6 +1075,21 @@ async function importYdk() {
   document.getElementById('ydkCustom').value='';
   document.getElementById('ydkYgopro').value='';
   showAlert(successEl, `Imported ${customIds.length+ygoIds.length} card IDs.`, 'success');
+}
+
+function parseYdkLines(text) {
+  const lines = text.split('\n');
+  const result = [];
+  let discard = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith('!')) { discard = true; continue; }
+    if (discard) continue;
+    if (trimmed.startsWith('#')) continue;
+    if (/\d/.test(trimmed)) result.push(trimmed);
+  }
+  return result;
 }
 </script>
 </body>
