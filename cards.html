@@ -551,6 +551,44 @@ function sortAndRenderBoth() {
   sortCards(ygoproAll);    ygoproShown = ygoproLimit; renderYgopro();
 }
 
+// ── Pre-fill filters from URL params (e.g. from card-detail chip clicks) ──────
+(function applyUrlParams() {
+  const p = new URLSearchParams(location.search);
+  const map = {
+    name:      'fName',
+    type:      'fType',
+    attribute: 'fAttr',
+    race:      'fRace',
+    level:     'fLevel',
+    atk:       'fAtk',
+    def:       'fDef',
+    archetype: 'fArchetype',
+  };
+  let hasAny = false;
+  for (const [param, elId] of Object.entries(map)) {
+    const val = p.get(param);
+    if (val) {
+      const el = document.getElementById(elId);
+      if (el) { el.value = val; hasAny = true; }
+    }
+  }
+  // Race options depend on type; if no type given, populate all monster races first
+  if (p.get('race') && !p.get('type')) {
+    buildOptions(document.getElementById('fRace'), MONSTER_RACES, 'All');
+    document.getElementById('fRace').value = p.get('race');
+  }
+  // Open filter drawer and render chips if any advanced filter was set
+  if (hasAny) {
+    const ADVANCED = ['fType','fAttr','fRace','fLevel','fAtk','fDef','fArchetype'];
+    const hasAdvanced = ADVANCED.some(id => document.getElementById(id)?.value?.trim());
+    if (hasAdvanced) {
+      filterDrawer.classList.add('open');
+      filterToggleBtn.classList.add('open');
+    }
+    renderChips();
+  }
+})();
+
 doSearch();
 </script>
 </body>

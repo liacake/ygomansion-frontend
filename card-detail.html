@@ -149,14 +149,20 @@ function renderCard() {
   const img     = card.imageUrl;
   const atkDef  = formatAtkDef(card.atk, card.def);
 
+  // Build a search URL for cards.html with a given filter param
+  function searchUrl(param, value) {
+    return `cards.html?${param}=${encodeURIComponent(value)}`;
+  }
+
   const stats = [];
-  if (card.attribute) stats.push(`<div class="card-detail-stat"><strong>Attribute</strong> ${escHtml(card.attribute)}</div>`);
-  if (card.race)      stats.push(`<div class="card-detail-stat"><strong>Race</strong> ${escHtml(card.race)}</div>`);
-  if (card.level)     stats.push(`<div class="card-detail-stat"><strong>Level</strong> ${escHtml(card.level)}</div>`);
+  if (card.attribute) stats.push(`<a class="card-detail-stat card-detail-stat--link" href="${searchUrl('attribute', card.attribute)}" title="Search by attribute"><strong>Attribute</strong> ${escHtml(card.attribute)}</a>`);
+  if (card.race)      stats.push(`<a class="card-detail-stat card-detail-stat--link" href="${searchUrl('race', card.race)}" title="Search by race"><strong>Race</strong> ${escHtml(card.race)}</a>`);
+  if (card.level)     stats.push(`<a class="card-detail-stat card-detail-stat--link" href="${searchUrl('level', card.level)}" title="Search by level"><strong>Level</strong> ${escHtml(card.level)}</a>`);
   if (card.scale)     stats.push(`<div class="card-detail-stat"><strong>Scale</strong> ${escHtml(card.scale)}</div>`);
   if (card.linkval)   stats.push(`<div class="card-detail-stat"><strong>Link</strong> ${escHtml(card.linkval)}</div>`);
-  if (atkDef)         stats.push(`<div class="card-detail-stat">${escHtml(atkDef)}</div>`);
-  if (card.archetype) stats.push(`<div class="card-detail-stat"><strong>Archetype</strong> ${escHtml(card.archetype)}</div>`);
+  if (card.atk != null) stats.push(`<a class="card-detail-stat card-detail-stat--link" href="${searchUrl('atk', card.atk)}" title="Search by ATK"><strong>ATK</strong> ${escHtml(String(card.atk))}</a>`);
+  if (card.def != null) stats.push(`<a class="card-detail-stat card-detail-stat--link" href="${searchUrl('def', card.def)}" title="Search by DEF"><strong>DEF</strong> ${escHtml(String(card.def))}</a>`);
+  if (card.archetype) stats.push(`<a class="card-detail-stat card-detail-stat--link" href="${searchUrl('archetype', card.archetype)}" title="Search by archetype"><strong>Archetype</strong> ${escHtml(card.archetype)}</a>`);
 
   content.innerHTML = `
     <div class="card-detail">
